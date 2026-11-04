@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "IDentidad nueveonce",
+  "short_name": "IDentidad",
+  "description": "Carnets del personal de Nueve Once: carga los datos y las fotos, revisa e imprime en la Zebra ZC100.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EDF2F8",
+  "theme_color": "#004C97",
+  "launch_handler": { "client_mode": "focus-existing" },
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
