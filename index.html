@@ -516,6 +516,10 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
 .tg-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 2px 0;font-size:.85rem;color:var(--muted)}
 .tgwhen{grid-column:1/-1;justify-self:start;font-size:.76rem;font-weight:700;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:2px 9px;border-radius:999px}
 .tgwhen.today{color:#12805A;background:#E3F5EC;border-color:#BFE6D2}
+.tg-bridge{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:8px;background:var(--sunk);border-radius:12px;padding:10px 14px;font-size:.88rem}
+.tg-bridge input{border:1.5px solid var(--line-2);background:var(--card);border-radius:8px;padding:7px 10px;font:inherit;font-size:.85rem;min-width:0}
+.tgstate.ok{color:#12805A}.tgstate.no{color:#A34A00}
+@media (max-width:700px){.tg-bridge{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -716,6 +720,11 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
     <span style="flex:1"></span>
     <button class="link" id="tgForget" type="button">Olvidar clave</button>
     <button class="btn primary small" id="tgFetch" type="button"><svg class="i"><use href="#i-search"/></svg>Buscar mensajes nuevos</button>
+  </div>
+  <div class="tg-bridge" id="tgBridge" hidden>
+    <span class="tgb-label">Puente de fotos: <b id="tgBridgeState" class="tgstate no">sin configurar</b></span>
+    <input type="url" id="tgProxy" placeholder="https://identidad-fotos.tu-usuario.workers.dev" aria-label="Dirección del puente de fotos">
+    <button class="btn small" id="tgProxySave" type="button">Guardar y probar</button>
   </div>
   <p class="msg" id="tgMsg"></p>
   <div class="tg-tools" id="tgTools" hidden>
@@ -2499,9 +2508,14 @@ async function openSessionFile(f){
 $("#sessionInput").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)openSessionFile(f)});
 
 /* ===================== Telegram ===================== */
-const TG_KEY="identidad-tg-token",TG_OFF="identidad-tg-offset";
-const tg={token:"",bot:null,items:[],maxId:0};
-try{tg.token=localStorage.getItem(TG_KEY)||""}catch(e){}
+const TG_KEY="identidad-tg-token",TG_OFF="identidad-tg-offset",TG_PROXY="identidad-tg-proxy";
+const tg={token:"",bot:null,items:[],maxId:0,proxy:""};
+try{tg.token=localStorage.getItem(TG_KEY)||"";tg.proxy=localStorage.getItem(TG_PROXY)||""}catch(e){}
+function tgFileUrl(path,viaProxy){return (viaProxy&&tg.proxy?tg.proxy:"https://api.telegram.org")+`/file/bot${tg.token}/${path}`}
+function tgBridgeView(){
+  const ok=!!tg.proxy;$("#tgBridgeState").textContent=ok?"configurado":"sin configurar";$("#tgBridgeState").className="tgstate "+(ok?"ok":"no");
+  $("#tgProxy").value=tg.proxy||"";
+}
 async function tgCall(method,params){
   const r=await fetch(`https://api.telegram.org/bot${tg.token}/${method}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params||{})});
   const j=await r.json().catch(()=>({ok:false,description:"Respuesta no válida"}));
@@ -2511,7 +2525,7 @@ async function tgCall(method,params){
 function tgSetView(){
   const has=!!tg.token;$("#tgConnect").hidden=has;$("#tgConnected").hidden=!has;
   $("#tgBotName").textContent=tg.bot?("@"+tg.bot.username):"tu bot";
-  $("#tgFetch").disabled=!has;
+  $("#tgFetch").disabled=!has;$("#tgBridge").hidden=!has;tgBridgeView();
 }
 async function tgOpen(){
   const d=$("#tgDlg");setMsg("#tgMsg","");tgSetView();renderTgItems();
@@ -2521,6 +2535,14 @@ async function tgOpen(){
 function tgClose(){const d=$("#tgDlg");d.close?d.close():d.removeAttribute("open")}
 function tgForget(silent){tg.token="";tg.bot=null;try{localStorage.removeItem(TG_KEY)}catch(e){}tgSetView();if(!silent)setMsg("#tgMsg","Clave borrada de este navegador.","ok")}
 $("#tgBtn").onclick=tgOpen;
+$("#tgProxySave").onclick=async()=>{
+  let u=$("#tgProxy").value.trim().replace(/\/+$/,"");
+  if(!u){tg.proxy="";try{localStorage.removeItem(TG_PROXY)}catch(e){}tgBridgeView();setMsg("#tgMsg","Puente quitado.","ok");return}
+  if(!/^https:\/\/[^\s/]+$/.test(u)){setMsg("#tgMsg","Pega la dirección completa del puente, por ejemplo https://identidad-fotos.tu-usuario.workers.dev","bad");return}
+  setMsg("#tgMsg","Probando el puente…");
+  try{const r=await fetch(u+"/ping");if(!r.ok)throw new Error(String(r.status));tg.proxy=u;try{localStorage.setItem(TG_PROXY,u)}catch(e){}tgBridgeView();setMsg("#tgMsg","Puente funcionando. Ya se pueden traer las fotos en alta calidad.","ok")}
+  catch(e){setMsg("#tgMsg",e.message==="403"?"El puente rechazó la petición: revisa que su código tenga la dirección de tu app.":"No se pudo contactar con el puente. Revisa la dirección y que lo hayas publicado (Deploy) en Cloudflare.","bad")}
+};
 $("#tgCancel").onclick=tgClose;
 $("#tgDlg").addEventListener("cancel",e=>{e.preventDefault();tgClose()});
 $("#tgForget").onclick=()=>tgForget(false);
@@ -2618,7 +2640,7 @@ $("#tgFetch").onclick=async()=>{
     });
     let n=0;
     await pool(items,6,async it=>{
-      if(it.thumbId){try{it.thumb=await tgBlobUrl(it.thumbId)}catch(e){it.thumb=null}}
+      if(it.thumbId){try{const f=await tgCall("getFile",{file_id:it.thumbId});it.thumb=tgFileUrl(f.file_path,false)}catch(e){it.thumb=null}}
       n++;setMsg("#tgMsg",`Cargando vistas previas… ${n} de ${items.length}`);
     });
     items.sort((a,b)=>b.when-a.when);
@@ -2665,15 +2687,17 @@ function renderTgItems(){
 $("#tgAdd").onclick=async()=>{
   const sel=tg.items.filter(i=>i.include&&digits(i.cedula)&&i.nombre.trim());
   if(!sel.length)return;
+  if(!tg.proxy){setMsg("#tgMsg","Para traer las fotos en alta calidad falta configurar el puente de fotos (más arriba). Telegram no permite descargarlas directamente desde una página web.","bad");$("#tgProxy").focus();return}
   const addBtn=$("#tgAdd");addBtn.disabled=true;let n=0,fail=0;
   setMsg("#tgMsg",`Descargando fotos en alta calidad… 0 de ${sel.length}`);
   await pool(sel,6,async it=>{
-    try{const r=await tgCall("getFile",{file_id:it.fullId});const res=await fetch(`https://api.telegram.org/file/bot${tg.token}/${r.file_path}`);if(!res.ok)throw 0;
+    try{const r=await tgCall("getFile",{file_id:it.fullId});const res=await fetch(tgFileUrl(r.file_path,true));if(!res.ok)throw 0;
       const blob=await res.blob();const file=new File([blob],it.fullName,{type:blob.type||"image/jpeg"});
       const url=await fileToUrl(file);let rec=await makePhotoRec(file.name,url,false);rec=await flattenAlpha(rec,file);rec=await shrinkIfLarge(rec);it.photo=rec}
     catch(e){it.photo=null;fail++}
     n++;setMsg("#tgMsg",`Descargando fotos en alta calidad… ${n} de ${sel.length}`);
   });
+  if(fail&&fail===sel.length){setMsg("#tgMsg","No se pudo descargar ninguna foto a través del puente. Revisa que siga publicado en Cloudflare y vuelve a intentarlo; no se añadió nada.","bad");addBtn.disabled=false;return}
   if(fail){setMsg("#tgMsg",`${fail===1?"Una foto no se pudo descargar":fail+" fotos no se pudieron descargar"}. Se añaden las demás; a quien falte foto puedes ponérsela después.`,"warn")}
   let added=0,updated=0;
   for(const it of sel){
@@ -2685,7 +2709,7 @@ $("#tgAdd").onclick=async()=>{
     if(it.photo){if(!photos.includes(it.photo))photos.push(it.photo);p.photo=it.photo;p.match="Telegram";p.adj=null}
   }
   try{if(tg.maxId){await tgCall("getUpdates",{offset:tg.maxId+1,limit:1,timeout:0});localStorage.setItem(TG_OFF,String(tg.maxId+1))}}catch(e){}
-  tg.items.forEach(it=>{if(it.thumb)URL.revokeObjectURL(it.thumb)});tg.items=[];addBtn.disabled=false;tgClose();setDirty();
+  tg.items=[];addBtn.disabled=false;tgClose();setDirty();
   logActivity("Importado de Telegram",(added?plural(added,"persona nueva","personas nuevas"):"")+(added&&updated?", ":"")+(updated?plural(updated,"actualizada","actualizadas"):""),"one");
   setMsg("#excelMsg",`Desde Telegram: ${added?plural(added,"persona añadida","personas añadidas"):""}${added&&updated?" y ":""}${updated?plural(updated,"persona actualizada","personas actualizadas"):""}.`,"ok");
   prevIdx=Math.max(0,people.length-1);renderPeople();renderPreview();
