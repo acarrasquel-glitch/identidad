@@ -494,6 +494,28 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
 .a-people .search{flex:0 1 300px;min-width:200px}
 .search input{min-width:0}
 @media (max-width:760px){.a-people .sec-tools{flex-wrap:wrap;width:100%}.a-people .search{flex:1 1 100%}}
+.dlg-wide{width:min(980px,96vw)}
+.tg-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.tg-logo{width:42px;height:42px;border-radius:12px;background:#E2F4FB;color:#1C7FA6;display:grid;place-items:center;flex:none}
+.tg-logo svg.i{width:20px;height:20px}
+.tg-connect{display:grid;grid-template-columns:1fr auto;gap:0 10px;align-items:end;background:var(--sunk);border-radius:12px;padding:14px}
+.tg-connect .field{margin:0}.tg-connect .dlg-hint{grid-column:1/-1;margin:8px 0 0}
+.tg-connected{display:flex;align-items:center;gap:12px;background:var(--sunk);border-radius:12px;padding:10px 14px;font-size:.9rem}
+.tg-list{max-height:min(52vh,520px);overflow:auto;margin:12px 0 16px;display:flex;flex-direction:column;gap:8px}
+.tg-empty{color:var(--muted);text-align:center;padding:26px 10px;margin:0;border:1.5px dashed var(--line-2);border-radius:12px}
+.tgrow{display:grid;grid-template-columns:auto 64px 1fr;gap:12px;align-items:start;padding:10px;border-radius:12px;background:var(--sunk);border:1.5px solid transparent}
+.tgrow.warn{border-color:#F5C9A6;background:#FFF7F0}
+.tgrow>input[type=checkbox]{width:18px;height:18px;margin-top:22px}
+.tgthumb{width:64px;height:84px;border-radius:8px;object-fit:cover;background:#A6A6A6;display:block}
+.tgfields{display:grid;grid-template-columns:1fr 1fr 140px;gap:6px}
+.tgfields input,.tgfields select{border:1.5px solid var(--line-2);background:var(--card);border-radius:7px;padding:6px 8px;font-size:.86rem;min-width:0}
+.tgfields .wide{grid-column:1 / span 1}
+.tgwarn{grid-column:1/-1;display:flex;gap:6px;align-items:center;font-size:.78rem;font-weight:600;color:#A34A00}
+.tgwarn svg.i{width:14px;height:14px}
+@media (max-width:700px){.tgfields{grid-template-columns:1fr 1fr}}
+.tg-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 2px 0;font-size:.85rem;color:var(--muted)}
+.tgwhen{grid-column:1/-1;justify-self:start;font-size:.76rem;font-weight:700;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:2px 9px;border-radius:999px}
+.tgwhen.today{color:#12805A;background:#E3F5EC;border-color:#BFE6D2}
 </style>
 </head>
 <body>
@@ -516,6 +538,7 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
   <symbol id="i-zoomin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></symbol>
   <symbol id="i-zoomout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21.5 3.5 2.8 10.7c-.9.3-.9 1.6 0 1.9l4.7 1.6 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.6 4.8 3.5c.7.5 1.7.1 1.9-.7L22.9 4.8c.2-1-.6-1.7-1.4-1.3z"/><path d="m7.5 14.2 11-7.7-8.2 9.2"/></symbol>
   <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
@@ -548,6 +571,7 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
       <div class="a-files">
         <div class="sec-h"><h2>Archivos</h2><div class="sec-tools">
           <button class="link" id="tplXlsxBtn" type="button"><svg class="i"><use href="#i-down"/></svg>Descargar plantilla</button>
+          <button class="btn small" id="tgBtn" type="button"><svg class="i"><use href="#i-send"/></svg>Telegram</button>
           <span class="btn small filebtn"><svg class="i"><use href="#i-folder"/></svg>Abrir sesión<input type="file" id="sessionInput" accept=".identidad,.json" aria-label="Abrir sesión guardada"></span>
           <button class="btn small" id="sessionSave" type="button" disabled><svg class="i"><use href="#i-down"/></svg>Guardar sesión</button>
         </div></div>
@@ -680,6 +704,30 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
     <button class="btn primary" id="adjSave" type="button">Guardar</button>
   </div>
 </dialog>
+<dialog class="dlg dlg-wide" id="tgDlg" aria-labelledby="tgTitle">
+  <div class="tg-head"><span class="tg-logo"><svg class="i"><use href="#i-send"/></svg></span><div><h2 id="tgTitle">Traer de Telegram</h2><p class="dlg-sub" style="margin:0">Fotos y datos que llegaron al grupo, a través de tu bot.</p></div></div>
+  <div id="tgConnect" class="tg-connect">
+    <label class="field"><span>Clave del bot (te la dio BotFather)</span><input type="password" id="tgToken" autocomplete="off" placeholder="123456789:AA…"></label>
+    <button class="btn primary" id="tgSaveToken" type="button">Conectar</button>
+    <p class="dlg-hint">La clave se guarda solo en este navegador y no se envía a ningún sitio salvo a Telegram.</p>
+  </div>
+  <div id="tgConnected" class="tg-connected" hidden>
+    <span>Conectado a <b id="tgBotName"></b></span>
+    <span style="flex:1"></span>
+    <button class="link" id="tgForget" type="button">Olvidar clave</button>
+    <button class="btn primary small" id="tgFetch" type="button"><svg class="i"><use href="#i-search"/></svg>Buscar mensajes nuevos</button>
+  </div>
+  <p class="msg" id="tgMsg"></p>
+  <div class="tg-tools" id="tgTools" hidden>
+    <span id="tgSummary"></span><span style="flex:1"></span>
+    <button class="link" id="tgToday" type="button">Marcar solo los de hoy</button>
+    <button class="link" id="tgAll" type="button">Marcar todos</button>
+    <button class="link" id="tgNone" type="button">Desmarcar todos</button>
+  </div>
+  <div class="tg-list" id="tgList"></div>
+  <div class="dlg-actions"><button class="btn" id="tgCancel" type="button">Cerrar</button><span style="flex:1"></span><button class="btn primary" id="tgAdd" type="button" disabled><svg class="i"><use href="#i-users"/></svg> Añadir a la tanda</button></div>
+</dialog>
+
 <dialog class="dlg" id="printedDlg" aria-labelledby="printedTitle">
   <h2 id="printedTitle">¿Salió bien la impresión?</h2>
   <p class="dlg-sub" id="printedText"></p>
@@ -2449,6 +2497,199 @@ async function openSessionFile(f){
   }catch(e){setMsg("#excelMsg","Ese archivo no es una sesión válida de IDentidad.","bad")}
 }
 $("#sessionInput").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)openSessionFile(f)});
+
+/* ===================== Telegram ===================== */
+const TG_KEY="identidad-tg-token",TG_OFF="identidad-tg-offset";
+const tg={token:"",bot:null,items:[],maxId:0};
+try{tg.token=localStorage.getItem(TG_KEY)||""}catch(e){}
+async function tgCall(method,params){
+  const r=await fetch(`https://api.telegram.org/bot${tg.token}/${method}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params||{})});
+  const j=await r.json().catch(()=>({ok:false,description:"Respuesta no válida"}));
+  if(!j.ok){const e=new Error(j.description||"Error de Telegram");e.code=j.error_code;throw e}
+  return j.result;
+}
+function tgSetView(){
+  const has=!!tg.token;$("#tgConnect").hidden=has;$("#tgConnected").hidden=!has;
+  $("#tgBotName").textContent=tg.bot?("@"+tg.bot.username):"tu bot";
+  $("#tgFetch").disabled=!has;
+}
+async function tgOpen(){
+  const d=$("#tgDlg");setMsg("#tgMsg","");tgSetView();renderTgItems();
+  d.showModal?d.showModal():d.setAttribute("open","");
+  if(tg.token&&!tg.bot){try{tg.bot=await tgCall("getMe");tgSetView()}catch(e){if(e.code===401){setMsg("#tgMsg","La clave guardada ya no es válida. Pega la clave nueva del bot.","bad");tgForget(true)}}}
+}
+function tgClose(){const d=$("#tgDlg");d.close?d.close():d.removeAttribute("open")}
+function tgForget(silent){tg.token="";tg.bot=null;try{localStorage.removeItem(TG_KEY)}catch(e){}tgSetView();if(!silent)setMsg("#tgMsg","Clave borrada de este navegador.","ok")}
+$("#tgBtn").onclick=tgOpen;
+$("#tgCancel").onclick=tgClose;
+$("#tgDlg").addEventListener("cancel",e=>{e.preventDefault();tgClose()});
+$("#tgForget").onclick=()=>tgForget(false);
+$("#tgSaveToken").onclick=async()=>{
+  const t=$("#tgToken").value.trim();
+  if(!/^\d+:[\w-]{20,}$/.test(t)){setMsg("#tgMsg","Esa no parece una clave de bot. Copia el texto completo que te dio BotFather (números, dos puntos y letras).","bad");return}
+  setMsg("#tgMsg","Comprobando la clave…");tg.token=t;
+  try{tg.bot=await tgCall("getMe");try{localStorage.setItem(TG_KEY,t)}catch(e){}$("#tgToken").value="";setMsg("#tgMsg",`Conectado a @${tg.bot.username}.`,"ok");tgSetView()}
+  catch(e){tg.token="";tg.bot=null;setMsg("#tgMsg",e.code===401?"Telegram rechazó la clave. Revisa que la hayas copiado completa.":"No se pudo conectar con Telegram. Revisa tu conexión.","bad");tgSetView()}
+};
+/* --- leer el texto de un mensaje --- */
+function tgParse(text){
+  const out={nombre:"",apellido:"",cedula:"",cargo:"",empresa:"",contr:"",warn:[]};
+  let lines=String(text||"").split(/\r?\n+/).map(s=>s.replace(/^[\s•\-–*·]+/,"").trim()).filter(Boolean);
+  const rest=[];
+  for(const ln of lines){
+    const m=ln.match(/^(nombres?(?:\s+y\s+apellidos?)?|nombre\s+completo|apellidos?|c[ée]dula|c\.?\s*i\.?|documento|cargo|puesto|empresa|sede|centro|contratista|modalidad|tipo(?:\s+de\s+contrato)?)\s*[:：=\-]\s*(.+)$/i);
+    if(!m){rest.push(ln);continue}
+    const k=norm(m[1]),v=m[2].trim();
+    if(k.startsWith("apellido"))out.apellido=v;
+    else if(k.startsWith("nombre")){if(/apellido|completo/.test(k))out._full=v;else out.nombre=v}
+    else if(/cedula|^c ?i$|documento/.test(k))out.cedula=v;
+    else if(/cargo|puesto/.test(k))out.cargo=v;
+    else if(/empresa|sede|centro/.test(k))out._emp=v;
+    else out._con=v;
+  }
+  const all=lines.join(" ");
+  // cédula en texto libre
+  if(!out.cedula){
+    for(let i=0;i<rest.length;i++){const m=rest[i].match(/(?:(?:c\.?\s*i\.?|c[ée]dula(?:\s+de\s+identidad)?|n[°º.]?)\s*:?\s*)?([VE]\s*[-.]?\s*)?(\d{1,2}[.\s]?\d{3}[.\s]?\d{3}|\d{6,9})\b/i);
+      if(m){out.cedula=(m[1]?m[1].replace(/[\s.-]/g,"").toUpperCase()+"-":"")+m[2];const left=rest[i].replace(m[0],"").replace(/^[\s,:;-]+|[\s,:;-]+$/g,"");if(left)rest[i]=left;else rest.splice(i,1);break}}
+  }
+  out.cedula=digits(out.cedula)?out.cedula:"";
+  // empresa y contratista
+  const empSrc=out._emp||all,conSrc=out._con||all;
+  if(/urgencia/i.test(empSrc))out.empresa="Urgencias Nueve Once";else if(/nueve\s*once|nueveonce|n[óo]mina|administrativ/i.test(empSrc))out.empresa="Nueve Once";
+  if(/no\s*contratist|n[óo]mina|fijo|empleado|planta/i.test(conSrc))out.contr="No";else if(/contratist|honorario|independiente|freelance|servicios\s+profesionales|^s[ií]$/i.test(conSrc))out.contr="Sí";
+  else if(/^no$/i.test(conSrc.trim()))out.contr="No";
+  const isMeta=ln=>/^(urgencias?|nueve\s*once|nueveonce|contratista|n[óo]mina|fijo|empleado|planta|honorarios?|independiente)(\s*[·,\/|-]\s*(urgencias?|nueve\s*once|nueveonce|contratista|n[óo]mina|fijo|honorarios?))*\.?$/i.test(ln.trim())||/^(urgencias?|nueve\s*once)\s+(contratista|n[óo]mina)$/i.test(ln.trim())||/^(contratista|n[óo]mina)\s+(urgencias?|nueve\s*once)$/i.test(ln.trim());
+  const free=rest.filter(ln=>!isMeta(ln));
+  // nombre y cargo
+  let full=out._full||"";
+  if(!out.nombre&&!full&&free.length)full=free.shift();
+  if(!out.cargo&&free.length)out.cargo=free.shift();
+  if(full&&!out.nombre){
+    if(full.includes(",")){const [a,n]=full.split(",");out.apellido=a.trim();out.nombre=(n||"").trim()}
+    else{const t=full.split(/\s+/).filter(Boolean);
+      if(t.length>=4){out.nombre=t.slice(0,2).join(" ");out.apellido=t.slice(2).join(" ")}
+      else if(t.length===3){out.nombre=t[0];out.apellido=t.slice(1).join(" ");out.warn.push("Nombre de 3 palabras: revisa nombres y apellidos")}
+      else if(t.length===2){out.nombre=t[0];out.apellido=t[1]}
+      else out.nombre=full;}
+  }
+  if(!out.cedula)out.warn.push("Sin cédula");
+  if(!out.nombre)out.warn.push("Sin nombre");
+  if(!out.empresa){out.empresa="Nueve Once";out.warn.push("No indica empresa")}
+  if(!out.contr){out.contr="No";out.warn.push("No indica si es contratista")}
+  delete out._full;delete out._emp;delete out._con;
+  return out;
+}
+/* --- traer mensajes --- */
+async function pool(list,limit,fn){let i=0;const run=async()=>{while(i<list.length){const k=i++;await fn(list[k],k)}};await Promise.all(Array.from({length:Math.min(limit,list.length)},run))}
+async function tgBlobUrl(fileId){const f=await tgCall("getFile",{file_id:fileId});const r=await fetch(`https://api.telegram.org/file/bot${tg.token}/${f.file_path}`);if(!r.ok)throw new Error("descarga");return URL.createObjectURL(await r.blob())}
+async function tgDownload(fileId,name){
+  const f=await tgCall("getFile",{file_id:fileId});
+  const r=await fetch(`https://api.telegram.org/file/bot${tg.token}/${f.file_path}`);
+  if(!r.ok)throw new Error("descarga");
+  const blob=await r.blob();
+  return new File([blob],name||f.file_path.split("/").pop(),{type:blob.type||"image/jpeg"});
+}
+$("#tgFetch").onclick=async()=>{
+  if(!tg.token)return;
+  const btn=$("#tgFetch");btn.disabled=true;setMsg("#tgMsg","Buscando mensajes nuevos…");
+  try{
+    let off=0;try{off=parseInt(localStorage.getItem(TG_OFF)||"0",10)||0}catch(e){}
+    const ups=[];
+    for(let k=0;k<20;k++){const r=await tgCall("getUpdates",{offset:off||undefined,limit:100,timeout:0,allowed_updates:["message","channel_post"]});ups.push(...r);if(r.length<100)break;off=r[r.length-1].update_id+1}
+    tg.maxId=ups.reduce((m,u)=>Math.max(m,u.update_id),0);
+    const msgs=ups.map(u=>u.message||u.channel_post).filter(Boolean).sort((a,b)=>a.date-b.date||a.message_id-b.message_id);
+    const texts=msgs.filter(m=>m.text&&!m.photo);const used=new Set();
+    const groupCap={};msgs.forEach(m=>{if(m.media_group_id&&m.caption)groupCap[m.media_group_id]=m.caption});
+    const media=msgs.filter(m=>m.photo||(m.document&&/^image\//.test(m.document.mime_type||"")||(m.document&&/\.(heic|heif|jpe?g|png)$/i.test(m.document.file_name||""))));
+    if(!media.length){tg.items=[];renderTgItems();setMsg("#tgMsg",ups.length?"Hay mensajes nuevos, pero ninguno trae fotos.":"No hay mensajes nuevos desde la última vez. Recuerda que el bot solo ve lo que llega después de añadirlo al grupo, y que Telegram los guarda 24 horas.", ups.length?"warn":"");btn.disabled=false;return}
+    setMsg("#tgMsg",`Preparando ${plural(media.length,"foto","fotos")}…`);
+    const items=media.map(m=>{
+      let cap=m.caption||(m.media_group_id&&groupCap[m.media_group_id])||"";
+      if(!cap){const who=(m.from&&m.from.id)||(m.sender_chat&&m.sender_chat.id);
+        const cand=texts.filter(t=>!used.has(t)&&((t.from&&t.from.id)||(t.sender_chat&&t.sender_chat.id))===who&&Math.abs(t.date-m.date)<=180).sort((a,b)=>Math.abs(a.date-m.date)-Math.abs(b.date-m.date))[0];
+        if(cand){cap=cand.text;used.add(cand)}}
+      const data=tgParse(cap);if(!cap)data.warn=["Foto sin texto: escribe sus datos"];
+      if(m.photo){const ps=m.photo;data.fullId=ps[ps.length-1].file_id;const th=ps.find(s=>s.width>=240)||ps[ps.length-1];data.thumbId=th.file_id}
+      else{data.fullId=m.document.file_id;data.thumbId=m.document.thumbnail?m.document.thumbnail.file_id:(m.document.thumb?m.document.thumb.file_id:null)}
+      data.fullName=m.document&&m.document.file_name?m.document.file_name:`telegram_${m.message_id}.jpg`;
+      data.photo=null;data.thumb=null;data.when=new Date(m.date*1000);
+      data.include=!!(data.cedula&&data.nombre);return data;
+    });
+    let n=0;
+    await pool(items,6,async it=>{
+      if(it.thumbId){try{it.thumb=await tgBlobUrl(it.thumbId)}catch(e){it.thumb=null}}
+      n++;setMsg("#tgMsg",`Cargando vistas previas… ${n} de ${items.length}`);
+    });
+    items.sort((a,b)=>b.when-a.when);
+    tg.items=items;renderTgItems();
+    const okN=items.filter(i=>!i.warn.length).length;
+    setMsg("#tgMsg",`${plural(items.length,"persona encontrada","personas encontradas")}. ${okN===items.length?"Todas con sus datos completos.":plural(items.length-okN,"necesita revisión","necesitan revisión")+": corrígelas en la lista antes de añadirlas."}`,okN===items.length?"ok":"warn");
+  }catch(e){setMsg("#tgMsg",e.code===401?"Telegram rechazó la clave del bot. Pega la clave de nuevo.":e.code===409?"El bot está configurado con otra conexión (webhook). Avísame para revisarlo.":"No se pudo conectar con Telegram. Revisa tu conexión e inténtalo de nuevo.","bad")}
+  btn.disabled=false;
+};
+function tgSameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function tgWhen(d){
+  const now=new Date(),y=new Date(now);y.setDate(now.getDate()-1);
+  const hm=d.toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"});
+  if(tgSameDay(d,now))return "Hoy, "+hm;
+  if(tgSameDay(d,y))return "Ayer, "+hm;
+  return d.toLocaleDateString("es",{weekday:"short",day:"2-digit",month:"2-digit"})+", "+hm;
+}
+const tgComplete=it=>!!(digits(it.cedula)&&it.nombre.trim());
+$("#tgToday").onclick=()=>{const now=new Date();tg.items.forEach(it=>{it.include=tgComplete(it)&&tgSameDay(it.when,now)});renderTgItems()};
+$("#tgAll").onclick=()=>{tg.items.forEach(it=>{it.include=tgComplete(it)});renderTgItems()};
+$("#tgNone").onclick=()=>{tg.items.forEach(it=>{it.include=false});renderTgItems()};
+function renderTgItems(){
+  const box=$("#tgList");box.innerHTML="";
+  $("#tgTools").hidden=!tg.items.length;
+  if(tg.items.length){const now=new Date(),today=tg.items.filter(it=>tgSameDay(it.when,now)).length;
+    $("#tgSummary").textContent=`${plural(tg.items.length,"mensaje","mensajes")} con foto${today!==tg.items.length?`, ${today} de hoy`:", todos de hoy"}`;}
+  $("#tgAdd").disabled=!tg.items.some(i=>i.include);
+  $("#tgAdd").lastChild.nodeValue=" Añadir "+plural(tg.items.filter(i=>i.include).length,"persona","personas")+" a la tanda";
+  if(!tg.items.length){box.innerHTML='<p class="tg-empty">Pulsa «Buscar mensajes nuevos» para traer las fotos y los datos que llegaron al grupo.</p>';return}
+  tg.items.forEach((it,k)=>{
+    const row=document.createElement("div");row.className="tgrow"+(it.warn.length?" warn":"");
+    const ck=document.createElement("input");ck.type="checkbox";ck.checked=it.include;ck.setAttribute("aria-label","Incluir");ck.onchange=()=>{it.include=ck.checked;renderTgItems()};
+    const im=document.createElement(it.thumb?"img":"span");im.className="tgthumb";if(it.thumb){im.src=it.thumb;im.alt=""}
+    const f=document.createElement("div");f.className="tgfields";
+    const inp=(key,ph,cls)=>{const i=document.createElement("input");i.type="text";i.value=it[key]||"";i.placeholder=ph;i.className=cls||"";i.setAttribute("aria-label",ph);i.oninput=()=>{it[key]=i.value;if(key==="cedula"||key==="nombre"){it.include=tgComplete(it);ck.checked=it.include;$("#tgAdd").disabled=!tg.items.some(x=>x.include)}};return i};
+    const sel=(key,opts,label)=>{const s=document.createElement("select");s.setAttribute("aria-label",label);opts.forEach(o=>{const op=document.createElement("option");const [v,t]=Array.isArray(o)?o:[o,o];op.value=v;op.textContent=t;s.appendChild(op)});s.value=it[key];s.onchange=()=>{it[key]=s.value};return s};
+    f.append(inp("nombre","Nombres"),inp("apellido","Apellidos"),inp("cedula","Cédula","ced"),inp("cargo","Cargo","wide"),sel("empresa",["Nueve Once","Urgencias Nueve Once"],"Empresa"),sel("contr",[["No","Nómina"],["Sí","Contratista"]],"Tipo de contrato"));
+    if(it.warn.length){const w=document.createElement("div");w.className="tgwarn";w.innerHTML=SVG("i-alert");w.append(it.warn.join(" · "));f.appendChild(w)}
+    const when=document.createElement("span");when.className="tgwhen"+(tgSameDay(it.when,new Date())?" today":"");when.textContent=tgWhen(it.when);
+    f.prepend(when);
+    row.append(ck,im,f);box.appendChild(row);
+  });
+}
+$("#tgAdd").onclick=async()=>{
+  const sel=tg.items.filter(i=>i.include&&digits(i.cedula)&&i.nombre.trim());
+  if(!sel.length)return;
+  const addBtn=$("#tgAdd");addBtn.disabled=true;let n=0,fail=0;
+  setMsg("#tgMsg",`Descargando fotos en alta calidad… 0 de ${sel.length}`);
+  await pool(sel,6,async it=>{
+    try{const r=await tgCall("getFile",{file_id:it.fullId});const res=await fetch(`https://api.telegram.org/file/bot${tg.token}/${r.file_path}`);if(!res.ok)throw 0;
+      const blob=await res.blob();const file=new File([blob],it.fullName,{type:blob.type||"image/jpeg"});
+      const url=await fileToUrl(file);let rec=await makePhotoRec(file.name,url,false);rec=await flattenAlpha(rec,file);rec=await shrinkIfLarge(rec);it.photo=rec}
+    catch(e){it.photo=null;fail++}
+    n++;setMsg("#tgMsg",`Descargando fotos en alta calidad… ${n} de ${sel.length}`);
+  });
+  if(fail){setMsg("#tgMsg",`${fail===1?"Una foto no se pudo descargar":fail+" fotos no se pudieron descargar"}. Se añaden las demás; a quien falte foto puedes ponérsela después.`,"warn")}
+  let added=0,updated=0;
+  for(const it of sel){
+    let p=people.find(o=>digits(o.cedula)&&digits(o.cedula)===digits(it.cedula));
+    const fields={cedula:it.cedula,nombre:it.nombre.trim(),apellido:it.apellido.trim(),cargo:it.cargo.trim(),empresaRaw:it.empresa,contrRaw:it.contr,tipoRaw:""};
+    if(p){Object.assign(p,fields);if(p.printed){delete p.printed.front;delete p.printed.back}updated++}
+    else{p={...fields,photo:null,match:null,adj:null,printed:null};people.push(p);added++}
+    const r=classify(p,{empresa:true,contratista:true,tipo:false});p.tpl=r.tpl;p.tplWarn="";
+    if(it.photo){if(!photos.includes(it.photo))photos.push(it.photo);p.photo=it.photo;p.match="Telegram";p.adj=null}
+  }
+  try{if(tg.maxId){await tgCall("getUpdates",{offset:tg.maxId+1,limit:1,timeout:0});localStorage.setItem(TG_OFF,String(tg.maxId+1))}}catch(e){}
+  tg.items.forEach(it=>{if(it.thumb)URL.revokeObjectURL(it.thumb)});tg.items=[];addBtn.disabled=false;tgClose();setDirty();
+  logActivity("Importado de Telegram",(added?plural(added,"persona nueva","personas nuevas"):"")+(added&&updated?", ":"")+(updated?plural(updated,"actualizada","actualizadas"):""),"one");
+  setMsg("#excelMsg",`Desde Telegram: ${added?plural(added,"persona añadida","personas añadidas"):""}${added&&updated?" y ":""}${updated?plural(updated,"persona actualizada","personas actualizadas"):""}.`,"ok");
+  prevIdx=Math.max(0,people.length-1);renderPeople();renderPreview();
+};
 
 /* ---------- aviso al salir con cambios sin guardar ---------- */
 window.addEventListener("beforeunload",e=>{if(dirty&&people.length){e.preventDefault();e.returnValue=""}});
