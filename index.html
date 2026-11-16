@@ -752,7 +752,7 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
       <span class="btn primary small filebtn"><svg class="i"><use href="#i-folder"/></svg>Elegir carpeta exportada<input type="file" id="tgExpInput" webkitdirectory directory multiple aria-label="Elegir la carpeta exportada de Telegram"></span>
       <span class="tg-exp-name" id="tgExpName">Ninguna carpeta elegida</span>
     </div>
-    <p class="dlg-hint" style="margin:0">En Telegram Desktop: abre el grupo → ⋮ → <b>Exportar historial del chat</b>, marca solo <b>Fotos</b>, formato <b>JSON</b> y el período. Luego elige aquí la carpeta <b>ChatExport</b> que se crea.</p>
+    <p class="dlg-hint" style="margin:0">En Telegram Desktop: abre el grupo → ⋮ → <b>Exportar historial del chat</b>, marca solo <b>Fotos</b>, formato <b>JSON</b> y el período. Luego elige aquí la carpeta <b>ChatExport</b> que se crea. Sirve en formato JSON o HTML.</p>
   </div>
   </section>
   <p class="msg" id="tgMsg"></p>
@@ -2575,6 +2575,15 @@ function tgClose(){const d=$("#tgDlg");d.close?d.close():d.removeAttribute("open
 function tgForget(silent){tg.token="";tg.bot=null;try{localStorage.removeItem(TG_KEY)}catch(e){}tgSetView();if(!silent)setMsg("#tgMsg","Clave borrada de este navegador.","ok")}
 $("#tgBtn").onclick=tgOpen;
 tg.src="bot";tg.all=[];
+const MESES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12,january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12,ene:1,feb:2,mar:3,abr:4,jun:6,jul:7,ago:8,sep:9,oct:10,nov:11,dic:12,jan:1,apr:4,aug:8,dec:12};
+function tgFechaHtml(t){
+  t=String(t||"").trim();const p2=n=>String(n).padStart(2,"0");
+  let m=t.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?)(?:\s*UTC\s*([+-]\d{2}:?\d{2}))?/i);
+  if(m){const off=m[5]?(m[5].includes(":")?m[5]:m[5].slice(0,3)+":"+m[5].slice(3)):"";return new Date(`${m[3]}-${p2(m[2])}-${p2(m[1])}T${m[4].length===5?m[4]+":00":m[4].padStart(8,"0")}${off}`)}
+  m=t.match(/(\d{1,2})\s+(?:de\s+)?([a-záéíóú]+)\.?\s+(?:de\s+)?(\d{4})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?)(?:\s*UTC\s*([+-]\d{2}:?\d{2}))?/i);
+  if(m){const mes=MESES[norm(m[2])];if(mes){const hh=m[4].split(":");const off=m[5]?(m[5].includes(":")?m[5]:m[5].slice(0,3)+":"+m[5].slice(3)):"";return new Date(`${m[3]}-${p2(mes)}-${p2(m[1])}T${p2(hh[0])}:${hh[1]}:${hh[2]||"00"}${off}`)}}
+  const d=new Date(t);return isNaN(d)?new Date(0):d;
+}
 const tgFlat=t=>Array.isArray(t)?t.map(x=>typeof x==="string"?x:(x&&x.text)||"").join(""):(t||"");
 function tgFilterRange(){
   const f=$("#tgFrom").value,t=$("#tgTo").value;
@@ -2592,10 +2601,31 @@ $("#tgExpInput").addEventListener("change",async e=>{
   const files=[...e.target.files];e.target.value="";if(!files.length)return;
   const rel=f=>f.webkitRelativePath||f.name;
   const rj=files.find(f=>/(^|\/)result\.json$/i.test(rel(f)));
-  if(!rj){setMsg("#tgMsg","No encuentro el archivo result.json en esa carpeta. Al exportar, elige el formato «Legible por máquina (JSON)» y luego selecciona la carpeta ChatExport completa.","bad");return}
+  const htmls=files.filter(f=>/(^|\/)messages\d*\.html$/i.test(rel(f))).sort((a,b)=>(parseInt((rel(a).match(/messages(\d*)\.html$/i)||[])[1]||"1",10))-(parseInt((rel(b).match(/messages(\d*)\.html$/i)||[])[1]||"1",10)));
+  if(!rj&&!htmls.length){setMsg("#tgMsg","No encuentro los mensajes en esa carpeta. Selecciona la carpeta ChatExport completa que crea Telegram Desktop.","bad");return}
   setMsg("#tgMsg","Leyendo la exportación…");tg.src="export";
-  let data;try{data=JSON.parse(await readAs(rj,"readAsText"))}catch(err){setMsg("#tgMsg","No se pudo leer result.json. Vuelve a exportar en formato JSON.","bad");return}
-  const base=rel(rj).replace(/result\.json$/i,"");
+  let data;
+  if(rj){try{data=JSON.parse(await readAs(rj,"readAsText"))}catch(err){setMsg("#tgMsg","No se pudo leer result.json. Vuelve a exportar el chat.","bad");return}}
+  else{
+    // exportación en HTML: convertir al mismo formato que el JSON
+    data={name:"",messages:[]};let lastFrom="";let n=0;
+    for(const hf of htmls){
+      const doc=new DOMParser().parseFromString(await readAs(hf,"readAsText"),"text/html");
+      if(!data.name){const t=doc.querySelector(".page_header .text");if(t)data.name=t.textContent.trim()}
+      doc.querySelectorAll("div.message.default").forEach(el=>{
+        const fn=el.querySelector(".from_name");if(fn)lastFrom=fn.textContent.trim();
+        const when=tgFechaHtml((el.querySelector(".date")||{}).title||"");
+        const tx=el.querySelector("div.text");let text="";if(tx){const c=tx.cloneNode(true);c.querySelectorAll("br").forEach(b=>b.replaceWith("\n"));text=c.textContent.trim()}
+        const ph=el.querySelector("a.photo_wrap");const fl=el.querySelector("a.media_file, a.media_photo");
+        const href=ph?ph.getAttribute("href"):(fl?fl.getAttribute("href"):"");
+        const m={type:"message",id:++n,date_unixtime:String(Math.round(when/1000)),from_id:lastFrom,text};
+        if(ph)m.photo=href;else if(href&&/\.(heic|heif|jpe?g|png)$/i.test(href)){m.file=href;m.mime_type=/\.hei[cf]$/i.test(href)?"image/heic":"image/jpeg"}
+        else if(el.querySelector(".media_photo"))m.photo="(no incluida)";
+        data.messages.push(m);
+      });
+    }
+  }
+  const base=rel(rj||htmls[0]).replace(/[^\/]*$/,"");
   const map=new Map(files.map(f=>[rel(f).slice(base.length),f]));
   const msgs=(data.messages||[]).filter(m=>m.type==="message").map(m=>({...m,_when:new Date((parseInt(m.date_unixtime,10)||Date.parse(m.date)/1000)*1000),_text:tgFlat(m.text)}));
   const isImg=m=>m.photo||(m.file&&(/^image\//.test(m.mime_type||"")||/\.(heic|heif|jpe?g|png)$/i.test(m.file)));
@@ -2616,7 +2646,9 @@ $("#tgExpInput").addEventListener("change",async e=>{
   (async()=>{for(const it of tg.all){if(it.file&&!it.thumb&&/\.(heic|heif)$/i.test(it.file.name)){try{it.thumb=await fileToUrl(it.file);renderTgItems()}catch(e){}}}})();
   $("#tgExpName").textContent=(data.name?`«${data.name}» · `:"")+plural(tg.all.length,"mensaje con foto","mensajes con foto");
   tgApplyRange();
+  const sinArchivo=tg.all.filter(i=>!i.file).length;
   if(!tg.all.length)setMsg("#tgMsg","La exportación no tiene mensajes con fotos.","warn");
+  else if(sinArchivo===tg.all.length)setMsg("#tgMsg",`La exportación tiene ${plural(tg.all.length,"mensaje con foto","mensajes con foto")}, pero se exportó sin las fotos. Vuelve a exportar marcando «Fotos» para poder añadirlas.`,"bad");
   else if(!$("#tgFrom").value&&!$("#tgTo").value){const ok=tg.all.filter(i=>!i.warn.length).length;setMsg("#tgMsg",`${plural(tg.all.length,"persona encontrada","personas encontradas")} en la exportación. ${ok===tg.all.length?"Todas con sus datos completos.":plural(tg.all.length-ok,"necesita revisión","necesitan revisión")+": corrígelas en la lista."} Puedes acotar por fechas en la barra de la lista.`,ok===tg.all.length?"ok":"warn")}
 });
 $("#tgProxySave").onclick=async()=>{
@@ -2717,38 +2749,73 @@ function contratoDe(t){const s=norm(t);if(/\bno contratist/.test(s)||/\bnomina\b
 const TILDES_CARGO={medico:"médico",medica:"médica",paramedico:"paramédico",paramedica:"paramédica",tecnico:"técnico",tecnica:"técnica",mecanico:"mecánico",psicologo:"psicólogo",psicologa:"psicóloga",odontologo:"odontólogo",odontologa:"odontóloga",farmaceutico:"farmacéutico",farmaceutica:"farmacéutica",logistica:"logística",administracion:"administración",atencion:"atención",informatica:"informática",gestion:"gestión",radiologo:"radiólogo",radiologa:"radióloga",cardiologo:"cardiólogo",pediatrica:"pediátrica",clinico:"clínico",clinica:"clínica",quimico:"químico",fisioterapeuta:"fisioterapeuta",camarografo:"camarógrafo",electricista:"electricista",analitico:"analítico",academico:"académico",juridico:"jurídico",publico:"público",publica:"pública",credito:"crédito",economico:"económico",economica:"económica",basico:"básico",telefonico:"telefónico"};
 function tildarCargo(c){return String(c||"").replace(/\p{L}+/gu,w=>{const k=norm(w),t=TILDES_CARGO[k];if(!t||w!==k&&w.toLowerCase()!==k)return w;return w[0]===w[0].toUpperCase()?t[0].toUpperCase()+t.slice(1):t})}
 function esSiempreContratista(cargo){return /\b(param[eé]dic|m[eé]dic)/i.test(cargo||"")}
+/* ---------- lector v3: formatos reales del grupo ---------- */
+const CARGO_CLAVES=["operador","operadora","operario","operaria","analista","medic","paramedic","enfermer","conductor","chofer","auxiliar","asistente","especialista","coordinador","coordinadora","coordinacion","jefe","jefa","gerente","gerencia","director","directora","supervisor","supervisora","tecnic","tecnolog","ejecutiv","despachador","protocolo","valet","call","contact","back","backoffice","bioanalista","psicolog","piscolog","farmaceut","recepcionista","camarer","cociner","mensajer","motorizad","vigilante","seguridad","administrador","administradora","administrativ","asesor","consultor","ingenier","desarrollador","programador","disenador","contador","contadora","abogad","licenciad","radiolog","odontolog","nutricionista","fisioterapeut","terapeut","camiller","mantenimiento","limpieza","obrer","almacenista","comprador","cajer","promotor","vendedor","pasante","residente","instrumentista","laboratorista","telemedicina","aph","secretari","oficial","inspector","planificador","facturador","cobrador","atencion","atc","agente","lider","encargad","dibujante","electricista","plomero","mecanic","pintor","carpinter","soldador","enlace","gestor","gestora","trainee","becari"];
+const CARGO_EXACTAS=new Set(["call","contact","back","aph","atc","jefe","jefa","valet","lider","agente","oficial","enlace","gestor","gestora","seguridad","protocolo","residente","pasante"]);
+const esClaveCargo=w=>{const k=norm(w);if(!k)return false;if(CARGO_EXACTAS.has(k))return true;return CARGO_CLAVES.some(c=>!CARGO_EXACTAS.has(c)&&c.length>=5&&k.startsWith(c))||CARGO_CLAVES.includes(k)};
+const RX_CED3=/(?:\b(?:c\.?\s*i|c[ée]dula(?:\s+de\s+identidad)?)\.?\s*[:#.]?\s*)?(?:\b([VE])\s*[-.]?\s*)?(?<![\d.])(\d(?:[.\s]?\d){5,8})(?![\d])/i;
+const DROP_TOK=new Set(["gno","uno","contratista","contratistas","nomina","fijo","empleado","planta","honorarios","cargo","ci","c i"]);
+const SEDES=["las mercedes","el rosal","rosal","la candelaria","candelaria","chacao","altamira","los palos grandes","la castellana","el hatillo","baruta","el cafetal","la trinidad","prados del este","chuao","bello monte","sabana grande","catia","el paraiso","la urbina","los ruices","boleita","petare","san bernardino","los cortijos","macaracuay","santa monica","montalban","el recreo","la california","los dos caminos","la florida","las acacias","valle arriba","la boyera","el marques","sede","sede principal"];
+SEDES.forEach(x=>{if(!VE_LUGARES.includes(x))VE_LUGARES.push(x)});
+const RX_FECHA_TXT=/\b\d{1,2}\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(\s+(de\s+)?\d{2,4})?\b/ig;
+function parseLibre(clean){
+  clean=clean.replace(RX_FECHA_TXT," ").replace(/\b(ingresa|ingreso|fecha de ingreso)\b[^\n]*/ig," ");
+  let lines=clean.split(/\r?\n+/).map(s=>s.trim()).filter(Boolean)
+    .filter(l=>!/^(fecha\s+de\s+ingreso|ingres[oa]|fecha)\b/i.test(l)&&!/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/.test(l))
+    .filter(l=>!/^[^:]{2,40}:\s*$/.test(l));
+  const all=lines.join("\n");
+  const m=all.match(RX_CED3);
+  const out={nombre:"",apellido:"",cedula:"",cargo:"",empresa:empresaDe(clean),contr:contratoDe(clean),warn:[]};
+  let rest=all;
+  if(m){out.cedula=(m[1]?m[1].toUpperCase()+"-":"")+m[2];rest=all.slice(0,m.index)+" ⟂ "+all.slice(m.index+m[0].length)}
+  // segmentos: saltos de línea, el lugar de la cédula, guiones, comas, puntos y paréntesis
+  rest=rest.replace(/\(([^)]*)\)/g," ⟂ $1 ⟂ ").replace(/\s[-–|]\s|\s[-–]$|^[-–]\s/g," ⟂ ").replace(/[,;|·•]/g," ⟂ ").replace(/\.(\s|$)/g," ⟂ ").replace(/\n/g," ⟂ ");
+  const META=new Set(["urgencias","urgencia","nueve","once","nueveonce","grupo","gno","uno","nomina","contratista","contratistas","fijo","empleado","planta","honorarios"]);
+  const limpiar=s=>s.split(/\s+/).filter(t=>!DROP_TOK.has(norm(t))&&!/^c\.?i\.?:?$/i.test(t)&&!/^[VE][-.]?$/i.test(t)&&!/^\d+[\/.-]\d+[\/.-]\d+$/.test(t)).join(" ").replace(/^[\s\-–:.]+|[\s\-–:.]+$/g,"").replace(/\b(grupo\s+)?nueve\s*once\b|\burgencias\s+nueve\s*once\b/ig,"").trim();
+  const sinLugares=s=>{const toks=s.split(/\s+/).filter(Boolean),keep=[];for(let i=0;i<toks.length;){let hit=0;for(let k=Math.min(4,toks.length-i);k>=1;k--){if(esLugar(toks.slice(i,i+k).join(" "))){hit=k;break}}if(hit)i+=hit;else{keep.push(toks[i]);i++}}return keep.join(" ")};
+  let segs=rest.split("⟂").map(s=>s.trim()).filter(Boolean).filter(s=>{
+    const ws=norm(s).split(" ").filter(Boolean);
+    if(ws.length&&ws.every(w=>META.has(w))){if(ws.includes("urgencias")||ws.includes("urgencia")){if(!out.empresa)out.empresa="Urgencias Nueve Once"}return false}
+    return true;
+  }).map(limpiar).filter(s=>s&&/\p{L}/u.test(s));
+  // los segmentos que son solo un lugar se descartan, salvo el primero (puede ser un apellido como Bolívar)
+  segs=segs.filter((s,k)=>k===0||!esLugar(s));
+  // nombre y cargo
+  let nameTxt="",cargoTxt="";
+  if(segs.length){
+    const first=segs[0].split(/\s+/);const ki=first.findIndex(esClaveCargo);
+    if(ki===0){ // empieza por el cargo: el nombre está en otro segmento
+      const ni=segs.findIndex(s=>!s.split(/\s+/).some(esClaveCargo));
+      if(ni>=0){nameTxt=segs[ni];cargoTxt=segs.filter((_,k)=>k!==ni).join(" ")}else{cargoTxt=segs.join(" ")}
+    }else if(ki>0){nameTxt=first.slice(0,ki).join(" ");cargoTxt=[first.slice(ki).join(" "),...segs.slice(1)].join(" ")}
+    else{nameTxt=segs[0];cargoTxt=segs.slice(1).join(" ")}
+    if(!cargoTxt&&!m&&segs.length===1&&first.length<=1){nameTxt=segs[0]}
+  }
+  const nm=splitName(nameTxt);out.nombre=nm.nombre;out.apellido=nm.apellido;
+  let cg=sinLugares(cargoTxt).replace(/\s+/g," ").trim();
+  const fin=cg.match(/^(.*\S)\s+urgencias?$/i);
+  if(fin&&!/\b(de|del|en|y)$/i.test(fin[1])){cg=fin[1];out.empresa="Urgencias Nueve Once"}
+  out.cargo=tildarCargo(smartCase(cg));
+  if(!out.cedula)out.warn.push("Sin cédula");
+  if(!out.nombre)out.warn.push("Sin nombre");
+  if(!out.cargo)out.warn.push("Sin cargo");
+  if((all.match(/(?<![\d.])\d(?:[.\s]?\d){5,8}(?!\d)/g)||[]).length>=2){out.warn.push("Varias cédulas en el mensaje: revisa que los datos sean de una sola persona");out.cargo=out.cargo.replace(/\b(?:c\.?\s*i\.?|[VE][.-]?)?\s*\d(?:[.\s]?\d){5,8}\b/ig,"").replace(/\s+/g," ").trim()}
+  return out;
+}
 function tgParse(text){
   const clean=String(text||"").replace(/[*_~`]+/g,"").trim();
   const lines=clean.split(/\r?\n+/).map(s=>s.trim()).filter(Boolean);
-  const etiquetado=lines.some(l=>/^(nombres?|apellidos?|c[ée]dula|c\.?\s*i\.?|cargo|puesto|empresa|contratista)\s*[:：=]/i.test(l));
+  const etiquetado=lines.filter(l=>/^(nombres?|apellidos?|c[ée]dula|cargo|puesto|empresa|contratista)\s*[:：=]/i.test(l)).length>=2;
   let out;
-  const anchor=!etiquetado&&lines.findIndex(l=>{const m=l.match(RX_CED);return m&&/\p{L}{2,}/u.test(l.slice(0,m.index).replace(/c\.?\s*i\.?|c[ée]dula/ig,""))});
-  if(anchor!==false&&anchor>=0){
-    const L=lines[anchor],m=L.match(RX_CED);
-    const before=L.slice(0,m.index).replace(/(c\.?\s*i\.?|c[ée]dula)\s*[:#.]?\s*$/i,"").replace(/[\s,;:|·\-–]+$/,"").trim();
-    const after=[L.slice(m.index+m[0].length),...lines.filter((_,k)=>k!==anchor)].join(" ");
-    const nm=splitName(before);
-    out={nombre:nm.nombre,apellido:nm.apellido,cedula:(m[1]?m[1].replace(/[\s.-]/g,"").toUpperCase()+"-":"")+m[2],cargo:"",empresa:empresaDe(clean),contr:contratoDe(clean),warn:nm.warn?[nm.warn]:[]};
-    // cargo: lo que queda tras quitar códigos, contrato, lugares y separadores
-    let words=after.replace(/[|·•,;/]+/g," ").replace(/\s[-–]\s/g," ").split(/\s+/).filter(Boolean);
-    const drop=new Set(["gno","uno","contratista","contratistas","nomina","fijo","empleado","planta","honorarios","no"]);
-    words=words.filter(w=>!drop.has(norm(w).replace(/[^\p{L}]/gu,"")));
-    let cargo=words.join(" ").replace(/\b(grupo\s+)?nueve\s*once\b/ig,"").replace(/\burgencias\s+nueve\s*once\b/ig,"");
-    // quitar lugares conservando el texto original del cargo
-    const toks=cargo.split(/\s+/).filter(Boolean);let keep=[];
-    for(let i=0;i<toks.length;){let hit=0;for(let k=Math.min(4,toks.length-i);k>=1;k--){if(esLugar(toks.slice(i,i+k).join(" "))){hit=k;break}}if(hit){i+=hit}else{keep.push(toks[i]);i++}}
-    out.cargo=tildarCargo(smartCase(keep.join(" ").replace(/^[\s\-–,.]+|[\s\-–,.]+$/g,"")));
-    if(!out.cedula)out.warn.push("Sin cédula");
-    if(!out.nombre)out.warn.push("Sin nombre");
-    if(!out.cargo)out.warn.push("Sin cargo");
-    if(!out.empresa){out.empresa="Nueve Once";out.warn.push("No indica GNO o UNO")}
-  }else{
+  if(etiquetado){
     out=tgParseLines(lines.filter(l=>!esLugar(l)).join("\n"));
-    const e=empresaDe(clean);if(e){out.empresa=e;out.warn=out.warn.filter(w=>w!=="No indica empresa")}
+    const e=empresaDe(clean);if(e)out.empresa=e;
     out.nombre=smartCase(out.nombre);out.apellido=smartCase(out.apellido);out.cargo=tildarCargo(smartCase(out.cargo));
-  }
-  if(esSiempreContratista(out.cargo)){out.contr="Sí";out.warn=out.warn.filter(w=>w!=="No indica si es contratista")}
-  else if(!out.contr){out.contr="No";if(!out.warn.includes("No indica si es contratista"))out.warn.push("No indica si es contratista")}
+    out.warn=out.warn.filter(w=>!/^No indica/.test(w));
+  }else out=parseLibre(clean);
+  if(!out.empresa)out.empresa="Nueve Once";
+  if(esSiempreContratista(out.cargo)||/^(dr|dra|doctor|doctora)\b\.?/i.test(out.cargo))out.contr="Sí";
+  else if(!out.contr)out.contr="No";
   return out;
 }
 
