@@ -557,6 +557,7 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
   <symbol id="i-zoomin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></symbol>
   <symbol id="i-zoomout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M21.5 3.5 2.8 10.7c-.9.3-.9 1.6 0 1.9l4.7 1.6 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.6 4.8 3.5c.7.5 1.7.1 1.9-.7L22.9 4.8c.2-1-.6-1.7-1.4-1.3z"/><path d="m7.5 14.2 11-7.7-8.2 9.2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
@@ -589,6 +590,7 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
       <div class="a-files">
         <div class="sec-h"><h2>Archivos</h2><div class="sec-tools">
           <button class="link" id="tplXlsxBtn" type="button"><svg class="i"><use href="#i-down"/></svg>Descargar plantilla</button>
+          <button class="btn small" id="sessionNew" type="button"><svg class="i"><use href="#i-plus"/></svg>Nueva sesión</button>
           <button class="btn small" id="tgBtn" type="button"><svg class="i"><use href="#i-send"/></svg>Telegram</button>
           <span class="btn small filebtn"><svg class="i"><use href="#i-folder"/></svg>Abrir sesión<input type="file" id="sessionInput" accept=".identidad,.json" aria-label="Abrir sesión guardada"></span>
           <button class="btn small" id="sessionSave" type="button" disabled><svg class="i"><use href="#i-down"/></svg>Guardar sesión</button>
@@ -766,6 +768,12 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
   </div>
   <div class="tg-list" id="tgList"></div>
   <div class="dlg-actions"><button class="btn" id="tgCancel" type="button">Cerrar</button><span style="flex:1"></span><button class="btn primary" id="tgAdd" type="button" disabled><svg class="i"><use href="#i-users"/></svg> Añadir a la tanda</button></div>
+</dialog>
+
+<dialog class="dlg" id="newDlg" aria-labelledby="newTitle">
+  <h2 id="newTitle">¿Empezar una sesión nueva?</h2>
+  <p class="dlg-sub">La sesión actual tiene cambios sin guardar. Si empiezas una nueva sin guardarla, se perderán.</p>
+  <div class="dlg-actions"><button class="btn" id="newCancel" type="button">Cancelar</button><span style="flex:1"></span><button class="btn" id="newDiscard" type="button">Empezar sin guardar</button><button class="btn primary" id="newSave" type="button">Guardar y empezar nueva</button></div>
 </dialog>
 
 <dialog class="dlg" id="printedDlg" aria-labelledby="printedTitle">
@@ -2497,7 +2505,7 @@ function openPw(mode){
 function syncPw(){const on=pwMode!=="save";$("#pwFields").hidden=!on;$("#pwConfirmRow").hidden=pwMode!=="save"||!on}
 $("#pwProtect").addEventListener("change",syncPw);
 function closePw(){const d=$("#pwDlg");d.close?d.close():d.removeAttribute("open");pwMode=null}
-$("#pwCancel").onclick=()=>{closePw();pendingSession=null};
+$("#pwCancel").onclick=()=>{closePw();pendingSession=null;pendingNew=false};
 $("#pwDlg").addEventListener("cancel",e=>{e.preventDefault();closePw();pendingSession=null});
 $("#sessionSave").onclick=()=>{if(people.length)openPw("save")};
 $("#pwOk").onclick=async()=>{
@@ -2515,7 +2523,7 @@ $("#pwOk").onclick=async()=>{
       }else out=plain;
       closePw();
       const ok=await saveFile(name+".identidad",new Blob([out],{type:"application/json"}));
-      if(ok){logActivity("Sesión guardada",name,"pdf");lastSessionName=name;setDirty(false)}
+      if(ok){logActivity("Sesión guardada",name,"pdf");lastSessionName=name;setDirty(false);if(pendingNew){pendingNew=false;startNewSession()}}
     }else{
       const s=pendingSession;if(!s)return;
       setMsg("#pwMsg","Abriendo…");
@@ -2630,7 +2638,7 @@ $("#tgSaveToken").onclick=async()=>{
   catch(e){tg.token="";tg.bot=null;setMsg("#tgMsg",e.code===401?"Telegram rechazó la clave. Revisa que la hayas copiado completa.":"No se pudo conectar con Telegram. Revisa tu conexión.","bad");tgSetView()}
 };
 /* --- leer el texto de un mensaje --- */
-function tgParse(text){
+function tgParseLines(text){
   const out={nombre:"",apellido:"",cedula:"",cargo:"",empresa:"",contr:"",warn:[]};
   let lines=String(text||"").split(/\r?\n+/).map(s=>s.replace(/^[\s•\-–*·]+/,"").trim()).filter(Boolean);
   const rest=[];
@@ -2678,6 +2686,72 @@ function tgParse(text){
   delete out._full;delete out._emp;delete out._con;
   return out;
 }
+/* ---------- lectura de mensajes en una línea (formato del grupo) ---------- */
+const VE_LUGARES=["amazonas","anzoategui","apure","aragua","barinas","bolivar","carabobo","cojedes","delta amacuro","distrito capital","falcon","guarico","la guaira","vargas","lara","merida","miranda","monagas","nueva esparta","portuguesa","sucre","tachira","trujillo","yaracuy","zulia",
+ "caracas","barquisimeto","maracaibo","valencia","maracay","barcelona","puerto la cruz","lecheria","el tigre","anaco","puerto ordaz","ciudad guayana","ciudad bolivar","maturin","cumana","carupano","porlamar","margarita","coro","punto fijo","san cristobal","valera","acarigua","guanare","san fernando de apure","san fernando","san carlos","san felipe","los teques","guarenas","guatire","charallave","cua","ocumare del tuy","calabozo","valle de la pascua","san juan de los morros","tucupita","puerto ayacucho","cabimas","ciudad ojeda","el vigia","guacara","puerto cabello","la victoria","turmero","cagua","upata","el tocuyo","carora","quibor","cabudare","tinaquillo","ejido","estado","edo"];
+const NOMBRES_PILA=new Set(("jose luis carlos juan jesus miguel angel antonio manuel francisco rafael alejandro andres eduardo daniel david gabriel pedro jorge fernando ricardo roberto javier enrique alberto ramon gregorio simon pablo diego victor oscar hector julio cesar leonardo alexander alexis richard kevin jhon john anderson jean gustavo ernesto armando rodolfo orlando felix freddy wilmer yonathan jonathan elias samuel mateo sebastian santiago emilio tomas ivan oswaldo nelson edgar ruben raul hugo ignacio agustin vicente alfredo marcos mario martin nicolas leonel ronald frank edwin enmanuel emmanuel joel josue isaac abraham adrian alvaro arturo benjamin bernardo cristian christian domingo efrain elvis felipe gilberto heriberto humberto jaime joaquin leandro lorenzo marcel moises omar osmar ramiro reinaldo rene rigoberto salvador saul teodoro ulises wilfredo william yorman yohan johan junior "+
+ "maria ana carmen rosa luisa isabel alejandra andrea daniela gabriela valentina victoria mariana carolina patricia elena teresa josefina beatriz adriana fernanda paola paula laura lucia sofia camila valeria natalia veronica yolanda yuleisy yusmary yenny jenny milagros mercedes pilar gloria esther elizabeth ines cristina claudia diana monica silvia sandra susana angelica angela antonieta desiree dayana genesis fabiola raquel rebeca karina katherine lisbeth marisol nathaly oriana rosmary yorgelis zuleima francesca andreina josefa juliana julia margarita rocio lourdes dolores esperanza graciela irene yesenia johana jessica estefania estefany alicia amanda barbara cecilia clara emilia eva eugenia fatima florencia irma juana leticia lorena magdalena marta martha noemi norma olga raiza ruth sara soraya virginia ximena yasmin zoraida").split(" "));
+const PARTICULAS=new Set(["de","del","la","las","los","da","di","van","von","y"]);
+function tcase(s){return String(s||"").toLowerCase().replace(/(^|[\s\-'’])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Del|La|Las|Los|Da|Y)\b/g,(m,p,o)=>o===0?m:m.toLowerCase())}
+function smartCase(s){s=String(s||"").trim();return s&&(s===s.toUpperCase()||s===s.toLowerCase())?tcase(s):s}
+function splitName(full){
+  full=full.replace(/\s+/g," ").trim();
+  if(full.includes(",")){const [a,n]=full.split(",");return {nombre:smartCase(n||""),apellido:smartCase(a),warn:""}}
+  const raw=full.split(" ").filter(Boolean),units=[];
+  for(let i=0;i<raw.length;i++){let u=raw[i];while(PARTICULAS.has(norm(raw[i]))&&i+1<raw.length){i++;u+=" "+raw[i]}units.push(u)}
+  let n=1,warn="";
+  if(units.length>=4)n=2;
+  else if(units.length===3){const second=norm(units[1]);n=(NOMBRES_PILA.has(second)||/^(de|del)\s/.test(second))?2:1}
+  else if(units.length<=1)n=units.length;
+  return {nombre:smartCase(units.slice(0,n).join(" ")),apellido:smartCase(units.slice(n).join(" ")),warn};
+}
+function quitarLugares(s){
+  let t=" "+norm(s).replace(/[^\p{L}\p{N}\s]/gu," ").replace(/\s+/g," ")+" ";
+  for(const l of [...VE_LUGARES].sort((a,b)=>b.length-a.length))t=t.split(" "+l+" ").join(" ");
+  return t.trim();
+}
+function esLugar(s){return !!s.trim()&&!quitarLugares(s)}
+const RX_CED=/(?:(?:c\.?\s*i\.?|c[ée]dula(?:\s+de\s+identidad)?)\s*[:#.]?\s*)?([VE]\s*[-.]?\s*)?(\d{1,2}[.\s]\d{3}[.\s]\d{3}|\d{6,9})\b/i;
+function empresaDe(t){const s=" "+norm(t).replace(/[^\p{L}\s]/gu," ")+" ";if(/ uno /.test(s)||/urgencias nueve ?once/.test(s))return "Urgencias Nueve Once";if(/ gno /.test(s)||/ nueve ?once /.test(s)||/grupo nueve ?once/.test(s))return "Nueve Once";return ""}
+function contratoDe(t){const s=norm(t);if(/\bno contratist/.test(s)||/\bnomina\b|\bfijo\b|\bempleado\b|\bplanta\b/.test(s))return "No";if(/contratist|honorario|independiente/.test(s))return "Sí";return ""}
+const TILDES_CARGO={medico:"médico",medica:"médica",paramedico:"paramédico",paramedica:"paramédica",tecnico:"técnico",tecnica:"técnica",mecanico:"mecánico",psicologo:"psicólogo",psicologa:"psicóloga",odontologo:"odontólogo",odontologa:"odontóloga",farmaceutico:"farmacéutico",farmaceutica:"farmacéutica",logistica:"logística",administracion:"administración",atencion:"atención",informatica:"informática",gestion:"gestión",radiologo:"radiólogo",radiologa:"radióloga",cardiologo:"cardiólogo",pediatrica:"pediátrica",clinico:"clínico",clinica:"clínica",quimico:"químico",fisioterapeuta:"fisioterapeuta",camarografo:"camarógrafo",electricista:"electricista",analitico:"analítico",academico:"académico",juridico:"jurídico",publico:"público",publica:"pública",credito:"crédito",economico:"económico",economica:"económica",basico:"básico",telefonico:"telefónico"};
+function tildarCargo(c){return String(c||"").replace(/\p{L}+/gu,w=>{const k=norm(w),t=TILDES_CARGO[k];if(!t||w!==k&&w.toLowerCase()!==k)return w;return w[0]===w[0].toUpperCase()?t[0].toUpperCase()+t.slice(1):t})}
+function esSiempreContratista(cargo){return /\b(param[eé]dic|m[eé]dic)/i.test(cargo||"")}
+function tgParse(text){
+  const clean=String(text||"").replace(/[*_~`]+/g,"").trim();
+  const lines=clean.split(/\r?\n+/).map(s=>s.trim()).filter(Boolean);
+  const etiquetado=lines.some(l=>/^(nombres?|apellidos?|c[ée]dula|c\.?\s*i\.?|cargo|puesto|empresa|contratista)\s*[:：=]/i.test(l));
+  let out;
+  const anchor=!etiquetado&&lines.findIndex(l=>{const m=l.match(RX_CED);return m&&/\p{L}{2,}/u.test(l.slice(0,m.index).replace(/c\.?\s*i\.?|c[ée]dula/ig,""))});
+  if(anchor!==false&&anchor>=0){
+    const L=lines[anchor],m=L.match(RX_CED);
+    const before=L.slice(0,m.index).replace(/(c\.?\s*i\.?|c[ée]dula)\s*[:#.]?\s*$/i,"").replace(/[\s,;:|·\-–]+$/,"").trim();
+    const after=[L.slice(m.index+m[0].length),...lines.filter((_,k)=>k!==anchor)].join(" ");
+    const nm=splitName(before);
+    out={nombre:nm.nombre,apellido:nm.apellido,cedula:(m[1]?m[1].replace(/[\s.-]/g,"").toUpperCase()+"-":"")+m[2],cargo:"",empresa:empresaDe(clean),contr:contratoDe(clean),warn:nm.warn?[nm.warn]:[]};
+    // cargo: lo que queda tras quitar códigos, contrato, lugares y separadores
+    let words=after.replace(/[|·•,;/]+/g," ").replace(/\s[-–]\s/g," ").split(/\s+/).filter(Boolean);
+    const drop=new Set(["gno","uno","contratista","contratistas","nomina","fijo","empleado","planta","honorarios","no"]);
+    words=words.filter(w=>!drop.has(norm(w).replace(/[^\p{L}]/gu,"")));
+    let cargo=words.join(" ").replace(/\b(grupo\s+)?nueve\s*once\b/ig,"").replace(/\burgencias\s+nueve\s*once\b/ig,"");
+    // quitar lugares conservando el texto original del cargo
+    const toks=cargo.split(/\s+/).filter(Boolean);let keep=[];
+    for(let i=0;i<toks.length;){let hit=0;for(let k=Math.min(4,toks.length-i);k>=1;k--){if(esLugar(toks.slice(i,i+k).join(" "))){hit=k;break}}if(hit){i+=hit}else{keep.push(toks[i]);i++}}
+    out.cargo=tildarCargo(smartCase(keep.join(" ").replace(/^[\s\-–,.]+|[\s\-–,.]+$/g,"")));
+    if(!out.cedula)out.warn.push("Sin cédula");
+    if(!out.nombre)out.warn.push("Sin nombre");
+    if(!out.cargo)out.warn.push("Sin cargo");
+    if(!out.empresa){out.empresa="Nueve Once";out.warn.push("No indica GNO o UNO")}
+  }else{
+    out=tgParseLines(lines.filter(l=>!esLugar(l)).join("\n"));
+    const e=empresaDe(clean);if(e){out.empresa=e;out.warn=out.warn.filter(w=>w!=="No indica empresa")}
+    out.nombre=smartCase(out.nombre);out.apellido=smartCase(out.apellido);out.cargo=tildarCargo(smartCase(out.cargo));
+  }
+  if(esSiempreContratista(out.cargo)){out.contr="Sí";out.warn=out.warn.filter(w=>w!=="No indica si es contratista")}
+  else if(!out.contr){out.contr="No";if(!out.warn.includes("No indica si es contratista"))out.warn.push("No indica si es contratista")}
+  return out;
+}
+
 /* --- traer mensajes --- */
 async function pool(list,limit,fn){let i=0;const run=async()=>{while(i<list.length){const k=i++;await fn(list[k],k)}};await Promise.all(Array.from({length:Math.min(limit,list.length)},run))}
 async function tgBlobUrl(fileId){const f=await tgCall("getFile",{file_id:fileId});const r=await fetch(`https://api.telegram.org/file/bot${tg.token}/${f.file_path}`);if(!r.ok)throw new Error("descarga");return URL.createObjectURL(await r.blob())}
@@ -2792,6 +2866,28 @@ $("#tgAdd").onclick=async()=>{
   setMsg("#excelMsg",`Desde ${tg.src==="export"?"la exportación de Telegram":"Telegram"}: ${added?plural(added,"persona añadida","personas añadidas"):""}${added&&updated?" y ":""}${updated?plural(updated,"persona actualizada","personas actualizadas"):""}.`,"ok");
   prevIdx=Math.max(0,people.length-1);renderPeople();renderPreview();
 };
+
+/* ---------- nueva sesión ---------- */
+let pendingNew=false;
+function startNewSession(){
+  photos.forEach(ph=>{if(ph.url&&ph.url.startsWith("blob:"))URL.revokeObjectURL(ph.url)});photos=[];people=[];usingSample=false;
+  selected.clear();filterMode="all";$("#searchPeople").value="";
+  activity.length=0;renderActivity();lastSessionName="";
+  tg.all=[];tg.items=[];
+  ["#excelMsg","#photoMsg","#genMsg"].forEach(s=>setMsg(s,""));
+  prevIdx=0;setDirty(false);renderPeople();renderPreview();
+  window.scrollTo({top:0,behavior:"smooth"});toast("Nueva sesión lista: carga el Excel, las fotos o trae de Telegram.");
+}
+function closeNew(){const d=$("#newDlg");d.close?d.close():d.removeAttribute("open")}
+$("#sessionNew").onclick=()=>{
+  if(!people.length&&!photos.length){startNewSession();return}
+  if(!dirty){startNewSession();return}
+  const d=$("#newDlg");d.showModal?d.showModal():d.setAttribute("open","");$("#newCancel").focus();
+};
+$("#newCancel").onclick=closeNew;
+$("#newDlg").addEventListener("cancel",e=>{e.preventDefault();closeNew()});
+$("#newDiscard").onclick=()=>{closeNew();startNewSession()};
+$("#newSave").onclick=()=>{closeNew();pendingNew=true;openPw("save")};
 
 /* ---------- aviso al salir con cambios sin guardar ---------- */
 window.addEventListener("beforeunload",e=>{if(dirty&&people.length){e.preventDefault();e.returnValue=""}});
