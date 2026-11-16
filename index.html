@@ -520,6 +520,20 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
 .tg-bridge input{border:1.5px solid var(--line-2);background:var(--card);border-radius:8px;padding:7px 10px;font:inherit;font-size:.85rem;min-width:0}
 .tgstate.ok{color:#12805A}.tgstate.no{color:#A34A00}
 @media (max-width:700px){.tg-bridge{grid-template-columns:1fr}}
+.tgsrc{display:inline-flex;margin-bottom:12px}
+.tg-exp{display:flex;flex-direction:column;gap:10px;background:var(--sunk);border-radius:12px;padding:14px}
+.tg-exp-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tg-exp-name{font-size:.86rem;color:var(--muted)}
+.tgdate{display:flex;align-items:center;gap:6px;font-size:.86rem;font-weight:600;color:var(--ink-2)}
+.tgdate input{border:1.5px solid var(--line-2);background:var(--card);border-radius:8px;padding:6px 8px;font:inherit;font-size:.85rem}
+.tg-sec{border:1px solid var(--line);border-radius:14px;padding:12px 14px 14px;margin-top:10px}
+.tg-sec-t{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:.98rem;font-weight:800}
+.tg-sec-t span{width:24px;height:24px;border-radius:7px;background:var(--primary-soft);color:var(--primary-text);display:grid;place-items:center;font-size:.82rem;flex:none}
+.tg-sec-t em{font-style:normal;font-weight:600;font-size:.8rem;color:var(--muted)}
+.tg-sec .tg-connect,.tg-sec .tg-connected,.tg-sec .tg-bridge,.tg-sec .tg-exp{background:var(--sunk)}
+.tg-sec .tg-exp{padding:12px 14px}
+.tg-list{max-height:min(42vh,460px)}
+.tg-tools .tgdate input{padding:4px 6px;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -709,7 +723,9 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
   </div>
 </dialog>
 <dialog class="dlg dlg-wide" id="tgDlg" aria-labelledby="tgTitle">
-  <div class="tg-head"><span class="tg-logo"><svg class="i"><use href="#i-send"/></svg></span><div><h2 id="tgTitle">Traer de Telegram</h2><p class="dlg-sub" style="margin:0">Fotos y datos que llegaron al grupo, a través de tu bot.</p></div></div>
+  <div class="tg-head"><span class="tg-logo"><svg class="i"><use href="#i-send"/></svg></span><div><h2 id="tgTitle">Traer de Telegram</h2><p class="dlg-sub" style="margin:0">Fotos y datos del grupo, desde el bot o desde una exportación de Telegram Desktop.</p></div></div>
+  <section class="tg-sec" id="tgBotPane" aria-labelledby="tgSecBot">
+  <h3 class="tg-sec-t" id="tgSecBot"><span>1</span>Desde el grupo, con el bot <em>mensajes de las últimas 24 horas</em></h3>
   <div id="tgConnect" class="tg-connect">
     <label class="field"><span>Clave del bot (te la dio BotFather)</span><input type="password" id="tgToken" autocomplete="off" placeholder="123456789:AA…"></label>
     <button class="btn primary" id="tgSaveToken" type="button">Conectar</button>
@@ -726,12 +742,27 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
     <input type="url" id="tgProxy" placeholder="https://identidad-fotos.tu-usuario.workers.dev" aria-label="Dirección del puente de fotos">
     <button class="btn small" id="tgProxySave" type="button">Guardar y probar</button>
   </div>
+  </section>
+  <section class="tg-sec" aria-labelledby="tgSecExp">
+  <h3 class="tg-sec-t" id="tgSecExp"><span>2</span>Desde una exportación de Telegram Desktop <em>mensajes de cualquier fecha</em></h3>
+  <div id="tgExpPane" class="tg-exp">
+    <div class="tg-exp-row">
+      <span class="btn primary small filebtn"><svg class="i"><use href="#i-folder"/></svg>Elegir carpeta exportada<input type="file" id="tgExpInput" webkitdirectory directory multiple aria-label="Elegir la carpeta exportada de Telegram"></span>
+      <span class="tg-exp-name" id="tgExpName">Ninguna carpeta elegida</span>
+    </div>
+    <p class="dlg-hint" style="margin:0">En Telegram Desktop: abre el grupo → ⋮ → <b>Exportar historial del chat</b>, marca solo <b>Fotos</b>, formato <b>JSON</b> y el período. Luego elige aquí la carpeta <b>ChatExport</b> que se crea.</p>
+  </div>
+  </section>
   <p class="msg" id="tgMsg"></p>
   <div class="tg-tools" id="tgTools" hidden>
-    <span id="tgSummary"></span><span style="flex:1"></span>
-    <button class="link" id="tgToday" type="button">Marcar solo los de hoy</button>
-    <button class="link" id="tgAll" type="button">Marcar todos</button>
-    <button class="link" id="tgNone" type="button">Desmarcar todos</button>
+    <span id="tgSummary"></span>
+    <label class="tgdate">Desde <input type="date" id="tgFrom"></label>
+    <label class="tgdate">Hasta <input type="date" id="tgTo"></label>
+    <button class="link" id="tgRangeClear" type="button">Todas las fechas</button>
+    <span style="flex:1"></span>
+    <button class="link" id="tgToday" type="button">Marcar solo hoy</button>
+    <button class="link" id="tgAll" type="button">Todos</button>
+    <button class="link" id="tgNone" type="button">Ninguno</button>
   </div>
   <div class="tg-list" id="tgList"></div>
   <div class="dlg-actions"><button class="btn" id="tgCancel" type="button">Cerrar</button><span style="flex:1"></span><button class="btn primary" id="tgAdd" type="button" disabled><svg class="i"><use href="#i-users"/></svg> Añadir a la tanda</button></div>
@@ -2535,6 +2566,51 @@ async function tgOpen(){
 function tgClose(){const d=$("#tgDlg");d.close?d.close():d.removeAttribute("open")}
 function tgForget(silent){tg.token="";tg.bot=null;try{localStorage.removeItem(TG_KEY)}catch(e){}tgSetView();if(!silent)setMsg("#tgMsg","Clave borrada de este navegador.","ok")}
 $("#tgBtn").onclick=tgOpen;
+tg.src="bot";tg.all=[];
+const tgFlat=t=>Array.isArray(t)?t.map(x=>typeof x==="string"?x:(x&&x.text)||"").join(""):(t||"");
+function tgFilterRange(){
+  const f=$("#tgFrom").value,t=$("#tgTo").value;
+  const a=f?new Date(f+"T00:00:00"):null,z=t?new Date(t+"T23:59:59"):null;
+  return tg.all.filter(it=>(!a||it.when>=a)&&(!z||it.when<=z)).sort((x,y)=>y.when-x.when);
+}
+function tgApplyRange(){
+  tg.items=tgFilterRange();renderTgItems();
+  const f=$("#tgFrom").value||$("#tgTo").value;
+  if(tg.all.length&&f)setMsg("#tgMsg",tg.items.length?`${plural(tg.items.length,"persona","personas")} en el período elegido (de ${tg.all.length} ${tg.src==="export"?"en la exportación":"traídas del grupo"}).`:"No hay mensajes con foto en ese período.",tg.items.length?"ok":"warn");
+}
+$("#tgFrom").addEventListener("change",tgApplyRange);$("#tgTo").addEventListener("change",tgApplyRange);
+$("#tgRangeClear").onclick=()=>{$("#tgFrom").value="";$("#tgTo").value="";tgApplyRange()};
+$("#tgExpInput").addEventListener("change",async e=>{
+  const files=[...e.target.files];e.target.value="";if(!files.length)return;
+  const rel=f=>f.webkitRelativePath||f.name;
+  const rj=files.find(f=>/(^|\/)result\.json$/i.test(rel(f)));
+  if(!rj){setMsg("#tgMsg","No encuentro el archivo result.json en esa carpeta. Al exportar, elige el formato «Legible por máquina (JSON)» y luego selecciona la carpeta ChatExport completa.","bad");return}
+  setMsg("#tgMsg","Leyendo la exportación…");tg.src="export";
+  let data;try{data=JSON.parse(await readAs(rj,"readAsText"))}catch(err){setMsg("#tgMsg","No se pudo leer result.json. Vuelve a exportar en formato JSON.","bad");return}
+  const base=rel(rj).replace(/result\.json$/i,"");
+  const map=new Map(files.map(f=>[rel(f).slice(base.length),f]));
+  const msgs=(data.messages||[]).filter(m=>m.type==="message").map(m=>({...m,_when:new Date((parseInt(m.date_unixtime,10)||Date.parse(m.date)/1000)*1000),_text:tgFlat(m.text)}));
+  const isImg=m=>m.photo||(m.file&&(/^image\//.test(m.mime_type||"")||/\.(heic|heif|jpe?g|png)$/i.test(m.file)));
+  const texts=msgs.filter(m=>m._text&&!isImg(m));const used=new Set();
+  tg.all=msgs.filter(isImg).map(m=>{
+    let cap=m._text;
+    if(!cap){const cand=texts.filter(t=>!used.has(t)&&t.from_id===m.from_id&&Math.abs(t._when-m._when)<=180000).sort((a,b)=>Math.abs(a._when-m._when)-Math.abs(b._when-m._when))[0];if(cand){cap=cand._text;used.add(cand)}}
+    const d=tgParse(cap);if(!cap)d.warn=["Foto sin texto: escribe sus datos"];
+    const path=m.photo||m.file;const file=map.get(path)||null;
+    d.file=file;d.fullName=file?file.name:"foto.jpg";d.when=m._when;d.photo=null;
+    d.thumb=file&&!/\.(heic|heif)$/i.test(file.name)?URL.createObjectURL(file):null;
+    if(!file)d.warn.unshift("La exportación no incluye esta foto: exporta marcando «Fotos»");
+    d.include=!!(file&&d.cedula&&d.nombre);return d;
+  });
+  tg.maxId=0;
+  $("#tgSecExp").scrollIntoView({block:"nearest"});
+  // miniaturas de fotos de iPhone: convertirlas en segundo plano
+  (async()=>{for(const it of tg.all){if(it.file&&!it.thumb&&/\.(heic|heif)$/i.test(it.file.name)){try{it.thumb=await fileToUrl(it.file);renderTgItems()}catch(e){}}}})();
+  $("#tgExpName").textContent=(data.name?`«${data.name}» · `:"")+plural(tg.all.length,"mensaje con foto","mensajes con foto");
+  tgApplyRange();
+  if(!tg.all.length)setMsg("#tgMsg","La exportación no tiene mensajes con fotos.","warn");
+  else if(!$("#tgFrom").value&&!$("#tgTo").value){const ok=tg.all.filter(i=>!i.warn.length).length;setMsg("#tgMsg",`${plural(tg.all.length,"persona encontrada","personas encontradas")} en la exportación. ${ok===tg.all.length?"Todas con sus datos completos.":plural(tg.all.length-ok,"necesita revisión","necesitan revisión")+": corrígelas en la lista."} Puedes acotar por fechas en la barra de la lista.`,ok===tg.all.length?"ok":"warn")}
+});
 $("#tgProxySave").onclick=async()=>{
   let u=$("#tgProxy").value.trim().replace(/\/+$/,"");
   if(!u){tg.proxy="";try{localStorage.removeItem(TG_PROXY)}catch(e){}tgBridgeView();setMsg("#tgMsg","Puente quitado.","ok");return}
@@ -2614,7 +2690,7 @@ async function tgDownload(fileId,name){
 }
 $("#tgFetch").onclick=async()=>{
   if(!tg.token)return;
-  const btn=$("#tgFetch");btn.disabled=true;setMsg("#tgMsg","Buscando mensajes nuevos…");
+  const btn=$("#tgFetch");btn.disabled=true;setMsg("#tgMsg","Buscando mensajes nuevos…");tg.src="bot";
   try{
     let off=0;try{off=parseInt(localStorage.getItem(TG_OFF)||"0",10)||0}catch(e){}
     const ups=[];
@@ -2624,7 +2700,7 @@ $("#tgFetch").onclick=async()=>{
     const texts=msgs.filter(m=>m.text&&!m.photo);const used=new Set();
     const groupCap={};msgs.forEach(m=>{if(m.media_group_id&&m.caption)groupCap[m.media_group_id]=m.caption});
     const media=msgs.filter(m=>m.photo||(m.document&&/^image\//.test(m.document.mime_type||"")||(m.document&&/\.(heic|heif|jpe?g|png)$/i.test(m.document.file_name||""))));
-    if(!media.length){tg.items=[];renderTgItems();setMsg("#tgMsg",ups.length?"Hay mensajes nuevos, pero ninguno trae fotos.":"No hay mensajes nuevos desde la última vez. Recuerda que el bot solo ve lo que llega después de añadirlo al grupo, y que Telegram los guarda 24 horas.", ups.length?"warn":"");btn.disabled=false;return}
+    if(!media.length){tg.all=[];tg.items=[];renderTgItems();setMsg("#tgMsg",ups.length?"Hay mensajes nuevos, pero ninguno trae fotos.":"No hay mensajes nuevos desde la última vez. Recuerda que el bot solo ve lo que llega después de añadirlo al grupo, y que Telegram los guarda 24 horas.", ups.length?"warn":"");btn.disabled=false;return}
     setMsg("#tgMsg",`Preparando ${plural(media.length,"foto","fotos")}…`);
     const items=media.map(m=>{
       let cap=m.caption||(m.media_group_id&&groupCap[m.media_group_id])||"";
@@ -2643,8 +2719,7 @@ $("#tgFetch").onclick=async()=>{
       if(it.thumbId){try{const f=await tgCall("getFile",{file_id:it.thumbId});it.thumb=tgFileUrl(f.file_path,false)}catch(e){it.thumb=null}}
       n++;setMsg("#tgMsg",`Cargando vistas previas… ${n} de ${items.length}`);
     });
-    items.sort((a,b)=>b.when-a.when);
-    tg.items=items;renderTgItems();
+    tg.all=items;tg.items=tgFilterRange();renderTgItems();
     const okN=items.filter(i=>!i.warn.length).length;
     setMsg("#tgMsg",`${plural(items.length,"persona encontrada","personas encontradas")}. ${okN===items.length?"Todas con sus datos completos.":plural(items.length-okN,"necesita revisión","necesitan revisión")+": corrígelas en la lista antes de añadirlas."}`,okN===items.length?"ok":"warn");
   }catch(e){setMsg("#tgMsg",e.code===401?"Telegram rechazó la clave del bot. Pega la clave de nuevo.":e.code===409?"El bot está configurado con otra conexión (webhook). Avísame para revisarlo.":"No se pudo conectar con Telegram. Revisa tu conexión e inténtalo de nuevo.","bad")}
@@ -2664,12 +2739,13 @@ $("#tgAll").onclick=()=>{tg.items.forEach(it=>{it.include=tgComplete(it)});rende
 $("#tgNone").onclick=()=>{tg.items.forEach(it=>{it.include=false});renderTgItems()};
 function renderTgItems(){
   const box=$("#tgList");box.innerHTML="";
-  $("#tgTools").hidden=!tg.items.length;
+  $("#tgTools").hidden=!tg.all.length;
   if(tg.items.length){const now=new Date(),today=tg.items.filter(it=>tgSameDay(it.when,now)).length;
     $("#tgSummary").textContent=`${plural(tg.items.length,"mensaje","mensajes")} con foto${today!==tg.items.length?`, ${today} de hoy`:", todos de hoy"}`;}
   $("#tgAdd").disabled=!tg.items.some(i=>i.include);
+  if(!tg.items.length&&tg.all.length){box.innerHTML='<p class="tg-empty">No hay mensajes en el período elegido. Cambia las fechas o pulsa «Todas».</p>';$("#tgAdd").lastChild.nodeValue=" Añadir a la tanda";return}
   $("#tgAdd").lastChild.nodeValue=" Añadir "+plural(tg.items.filter(i=>i.include).length,"persona","personas")+" a la tanda";
-  if(!tg.items.length){box.innerHTML='<p class="tg-empty">Pulsa «Buscar mensajes nuevos» para traer las fotos y los datos que llegaron al grupo.</p>';return}
+  if(!tg.items.length){box.innerHTML='<p class="tg-empty">Usa el apartado 1 para traer los mensajes recientes del grupo, o el apartado 2 para cargar una exportación.</p>';return}
   tg.items.forEach((it,k)=>{
     const row=document.createElement("div");row.className="tgrow"+(it.warn.length?" warn":"");
     const ck=document.createElement("input");ck.type="checkbox";ck.checked=it.include;ck.setAttribute("aria-label","Incluir");ck.onchange=()=>{it.include=ck.checked;renderTgItems()};
@@ -2687,12 +2763,13 @@ function renderTgItems(){
 $("#tgAdd").onclick=async()=>{
   const sel=tg.items.filter(i=>i.include&&digits(i.cedula)&&i.nombre.trim());
   if(!sel.length)return;
-  if(!tg.proxy){setMsg("#tgMsg","Para traer las fotos en alta calidad falta configurar el puente de fotos (más arriba). Telegram no permite descargarlas directamente desde una página web.","bad");$("#tgProxy").focus();return}
+  if(sel.some(i=>!i.file)&&!tg.proxy){setMsg("#tgMsg","Para traer las fotos en alta calidad falta configurar el puente de fotos (más arriba). Telegram no permite descargarlas directamente desde una página web.","bad");$("#tgProxy").focus();return}
   const addBtn=$("#tgAdd");addBtn.disabled=true;let n=0,fail=0;
   setMsg("#tgMsg",`Descargando fotos en alta calidad… 0 de ${sel.length}`);
   await pool(sel,6,async it=>{
-    try{const r=await tgCall("getFile",{file_id:it.fullId});const res=await fetch(tgFileUrl(r.file_path,true));if(!res.ok)throw 0;
-      const blob=await res.blob();const file=new File([blob],it.fullName,{type:blob.type||"image/jpeg"});
+    try{let file=it.file;
+      if(!file){const r=await tgCall("getFile",{file_id:it.fullId});const res=await fetch(tgFileUrl(r.file_path,true));if(!res.ok)throw 0;
+      const blob=await res.blob();file=new File([blob],it.fullName,{type:blob.type||"image/jpeg"})}
       const url=await fileToUrl(file);let rec=await makePhotoRec(file.name,url,false);rec=await flattenAlpha(rec,file);rec=await shrinkIfLarge(rec);it.photo=rec}
     catch(e){it.photo=null;fail++}
     n++;setMsg("#tgMsg",`Descargando fotos en alta calidad… ${n} de ${sel.length}`);
@@ -2708,10 +2785,11 @@ $("#tgAdd").onclick=async()=>{
     const r=classify(p,{empresa:true,contratista:true,tipo:false});p.tpl=r.tpl;p.tplWarn="";
     if(it.photo){if(!photos.includes(it.photo))photos.push(it.photo);p.photo=it.photo;p.match="Telegram";p.adj=null}
   }
-  try{if(tg.maxId){await tgCall("getUpdates",{offset:tg.maxId+1,limit:1,timeout:0});localStorage.setItem(TG_OFF,String(tg.maxId+1))}}catch(e){}
+  try{if(tg.maxId&&tg.src==="bot"){await tgCall("getUpdates",{offset:tg.maxId+1,limit:1,timeout:0});localStorage.setItem(TG_OFF,String(tg.maxId+1))}}catch(e){}
+  {const done=new Set(sel);tg.all=tg.all.filter(i=>!done.has(i))}
   tg.items=[];addBtn.disabled=false;tgClose();setDirty();
   logActivity("Importado de Telegram",(added?plural(added,"persona nueva","personas nuevas"):"")+(added&&updated?", ":"")+(updated?plural(updated,"actualizada","actualizadas"):""),"one");
-  setMsg("#excelMsg",`Desde Telegram: ${added?plural(added,"persona añadida","personas añadidas"):""}${added&&updated?" y ":""}${updated?plural(updated,"persona actualizada","personas actualizadas"):""}.`,"ok");
+  setMsg("#excelMsg",`Desde ${tg.src==="export"?"la exportación de Telegram":"Telegram"}: ${added?plural(added,"persona añadida","personas añadidas"):""}${added&&updated?" y ":""}${updated?plural(updated,"persona actualizada","personas actualizadas"):""}.`,"ok");
   prevIdx=Math.max(0,people.length-1);renderPeople();renderPreview();
 };
 
