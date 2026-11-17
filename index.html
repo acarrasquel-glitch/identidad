@@ -776,6 +776,12 @@ tr.dropover td{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2p
   <div class="dlg-actions"><button class="btn" id="newCancel" type="button">Cancelar</button><span style="flex:1"></span><button class="btn" id="newDiscard" type="button">Empezar sin guardar</button><button class="btn primary" id="newSave" type="button">Guardar y empezar nueva</button></div>
 </dialog>
 
+<dialog class="dlg" id="readyDlg" aria-labelledby="readyTitle">
+  <h2 id="readyTitle">Listo para imprimir</h2>
+  <p class="dlg-sub" id="readyText"></p>
+  <div class="dlg-actions"><button class="btn" id="readyCancel" type="button">Cancelar</button><span style="flex:1"></span><button class="btn primary" id="readyGo" type="button"><svg class="i"><use href="#i-print"/></svg>Imprimir ahora</button></div>
+</dialog>
+
 <dialog class="dlg" id="printedDlg" aria-labelledby="printedTitle">
   <h2 id="printedTitle">¿Salió bien la impresión?</h2>
   <p class="dlg-sub" id="printedText"></p>
@@ -2028,8 +2034,7 @@ async function printItems(items,side,single){
     endBusy();
     await new Promise(r=>setTimeout(r,50));
     pendingConfirm={list:items.map(it=>it.p),side};
-    window.print();
-    setTimeout(askPrinted,350);
+    lanzarImpresion(items.length,side);
   }catch(err){area.innerHTML="";urls.forEach(u=>URL.revokeObjectURL(u));setMsg("#genMsg","No se pudo preparar la impresión. Usa «Descargar los PDF» e imprímelos desde allí.","bad");endBusy()}
 }
 $("#prFront").onclick=()=>printSide("front");
@@ -2970,6 +2975,24 @@ $("#newCancel").onclick=closeNew;
 $("#newDlg").addEventListener("cancel",e=>{e.preventDefault();closeNew()});
 $("#newDiscard").onclick=()=>{closeNew();startNewSession()};
 $("#newSave").onclick=()=>{closeNew();pendingNew=true;openPw("save")};
+
+/* ---------- impresión: detectar si el navegador la ignoró ---------- */
+let printAbierto=false,listoInfo=null;
+window.addEventListener("beforeprint",()=>{printAbierto=true});
+function lanzarImpresion(n,side){
+  printAbierto=false;listoInfo={n,side};
+  try{window.print()}catch(e){}
+  setTimeout(()=>{if(printAbierto)askPrinted();else mostrarListo()},400);
+}
+function mostrarListo(){
+  const {n,side}=listoInfo||{n:0,side:"front"};
+  $("#readyText").textContent=`${plural(n,side==="front"?"frente":"reverso",side==="front"?"frentes":"reversos")} ${n===1?"está listo":"están listos"} para imprimir. El navegador no abrió la ventana de impresión por su cuenta; ábrela con este botón.`;
+  const d=$("#readyDlg");if(!d.open){d.showModal?d.showModal():d.setAttribute("open","")}$("#readyGo").focus();
+}
+function cerrarListo(){const d=$("#readyDlg");d.close?d.close():d.removeAttribute("open")}
+$("#readyGo").onclick=()=>{cerrarListo();printAbierto=false;window.print();setTimeout(()=>{if(printAbierto)askPrinted();else mostrarListo()},400)};
+$("#readyCancel").onclick=()=>{cerrarListo();$("#printArea").innerHTML="";pendingConfirm=null;toast("Impresión cancelada")};
+$("#readyDlg").addEventListener("cancel",e=>{e.preventDefault();$("#readyCancel").click()});
 
 /* ---------- aviso al salir con cambios sin guardar ---------- */
 window.addEventListener("beforeunload",e=>{if(dirty&&people.length){e.preventDefault();e.returnValue=""}});
