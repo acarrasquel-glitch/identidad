@@ -1711,7 +1711,8 @@ function renderPeople(){
     col.appendChild(ch);
     if(p.photo&&p.photo.w&&Math.min(p.photo.w,p.photo.h)<500){const lo=document.createElement("span");lo.className="chipst warn";lo.innerHTML=SVG("i-alert");lo.append("Foto pequeña");lo.title=`La foto mide ${p.photo.w}×${p.photo.h} px. Para un carnet nítido usa al menos 600×600 px.`;col.appendChild(lo)}
     if(p.photoDup>1){const du=document.createElement("span");du.className="chipst warn";du.innerHTML=SVG("i-alert");du.append(p.photoDup+" fotos con su cédula");du.title="Se usó la última que cargaste. Si no es la correcta, cámbiala.";col.appendChild(du)}
-    if(p.printed&&p.printed.front){const pr=document.createElement("span");pr.className="chipst info";pr.innerHTML=SVG("i-print");pr.append("Impreso "+fmtDay(p.printed.front));col.appendChild(pr)}
+    if(faltaReverso(p)){const pr=document.createElement("span");pr.className="chipst warn";pr.innerHTML=SVG("i-flip");pr.append("Falta el reverso");pr.title="Frente impreso el "+fmtDay(p.printed.front);col.appendChild(pr)}
+    else if(frenteHecho(p)){const pr=document.createElement("span");pr.className="chipst info";pr.innerHTML=SVG("i-print");pr.append("Impreso "+fmtDay(esDoble(p)&&p.printed.back?Math.max(p.printed.front,p.printed.back):p.printed.front));col.appendChild(pr)}
     if(p.tplWarn){const w=document.createElement("div");w.className="wsmall";w.textContent=p.tplWarn;col.appendChild(w)}
     const t5=td();const ac=document.createElement("div");ac.className="acts-cell";t5.appendChild(ac);
     const ib=(icon,label,fn,dis,cls)=>{const b=document.createElement("button");b.type="button";b.className="ibtn"+(cls?" "+cls:"");b.innerHTML=SVG(icon);b.title=label;b.setAttribute("aria-label",label+": "+[p.nombre,p.apellido].filter(Boolean).join(" "));b.disabled=!!dis;b.onclick=ev=>{ev.stopPropagation();fn()};ac.appendChild(b)};
@@ -1726,7 +1727,7 @@ function renderPeople(){
   });
   if(!shown){const tr=document.createElement("tr");tr.className="nores";tr.innerHTML='<td colspan="5">Ninguna persona coincide con la búsqueda o el filtro.</td>';body.appendChild(tr)}
   const miss=people.length-ok;
-  setStats();renderBulk();
+  setStats();renderBulk();labelPendientes();
   $("#counts").textContent=`${people.length} personas, ${ok} con foto`+(miss?`, ${miss} sin foto`:"")+(warns?`, ${warns} por revisar`:"");
   renderGroups();
 }
@@ -2292,7 +2293,11 @@ const selected=new Set();
 let filterMode="all";
 function fullName(p){return [p.nombre,p.apellido].filter(Boolean).join(" ")}
 function needsReview(p){return !p.photo||!!p.tplWarn||p.photoDup>1||(p.photo&&p.photo.w&&Math.min(p.photo.w,p.photo.h)<500)}
-function isPending(p){return !(p.printed&&p.printed.front)}
+const esDoble=p=>!!(state.templates[p.tpl]&&state.templates[p.tpl].duplex);
+const frenteHecho=p=>!!(p.printed&&p.printed.front);
+const reversoHecho=p=>!!(p.printed&&p.printed.back);
+const faltaReverso=p=>esDoble(p)&&frenteHecho(p)&&!reversoHecho(p);
+function isPending(p){return !frenteHecho(p)||(esDoble(p)&&!reversoHecho(p))}
 const FILTERS=[["all","Todos",()=>true],["nophoto","Sin foto",p=>!p.photo],["review","Por revisar",needsReview],["pending","Pendientes",isPending],["printed","Impresos",p=>!isPending(p)]];
 function passFilter(p){const f=FILTERS.find(f=>f[0]===filterMode);return f?f[2](p):true}
 function renderFilters(){
@@ -2362,9 +2367,19 @@ $("#chkAll").addEventListener("change",e=>{const vis=people.filter(p=>passFilter
 $("#bulkClear").onclick=()=>{selected.clear();renderPeople()};
 $("#bulkFront").onclick=()=>{const items=[...selected].filter(p=>p.photo||$("#includeNoPhoto").checked).map(p=>({p,ti:p.tpl}));items.sort((a,b)=>(state.templates[a.ti].duplex?1:0)-(state.templates[b.ti].duplex?1:0)||a.ti-b.ti);if(!items.length){toast("Ninguna de las seleccionadas tiene foto");return}printItems(items,"front",false)};
 $("#bulkBack").onclick=()=>{let items=[...selected].filter(p=>state.templates[p.tpl].duplex&&(p.photo||$("#includeNoPhoto").checked)).map(p=>({p,ti:p.tpl}));items.sort((a,b)=>a.ti-b.ti);if($("#revOrder").checked)items.reverse();if(items.length)printItems(items,"back",false)};
-$("#bulkMark").onclick=()=>{markPrinted([...selected],"front",true);toast("Marcadas como impresas");renderPeople()};
+$("#bulkMark").onclick=()=>{const l=[...selected];markPrinted(l,"front",true);markPrinted(l.filter(esDoble),"back",true);toast("Marcadas como impresas");renderPeople()};
 $("#bulkUnmark").onclick=()=>{markPrinted([...selected],"front",false);markPrinted([...selected],"back",false);toast("Marcadas como pendientes");renderPeople()};
-$("#prPending").onclick=()=>{const items=frontItems().filter(it=>isPending(it.p));if(!items.length){toast("No hay carnets pendientes de imprimir");return}printItems(items,"front",false)};
+function pendientes(){
+  const fr=frontItems().filter(it=>!frenteHecho(it.p));
+  let bk=backItems().filter(it=>frenteHecho(it.p)&&!reversoHecho(it.p));
+  if($("#revOrder").checked)bk=bk.slice().reverse();
+  return {fr,bk};
+}
+function labelPendientes(){
+  const b=$("#prPending");if(!b)return;const {fr,bk}=pendientes();
+  b.lastChild.nodeValue=fr.length?` Imprimir frentes pendientes (${fr.length})`:bk.length?` Imprimir reversos pendientes (${bk.length})`:" Imprimir solo pendientes";
+}
+$("#prPending").onclick=()=>{const {fr,bk}=pendientes();if(fr.length){printItems(fr,"front",false);return}if(bk.length){printItems(bk,"back",false);return}toast("No hay carnets pendientes de imprimir")};
 
 /* ---------- editar y añadir personas ---------- */
 let editing=null;
@@ -2962,12 +2977,19 @@ window.addEventListener("beforeunload",e=>{if(dirty&&people.length){e.preventDef
 let pendingConfirm=null;
 function askPrinted(){
   if(!pendingConfirm)return;const {list,side}=pendingConfirm;
-  $("#printedText").textContent=list.length===1?`¿Se imprimió bien ${side==="front"?"el carnet":"el reverso"} de ${fullName(list[0])}?`:`¿Se imprimieron bien los ${list.length} ${side==="front"?"frentes":"reversos"}?`;
+  const dobles=side==="front"?list.filter(p=>esDoble(p)&&!reversoHecho(p)).length:0;
+  $("#printedText").textContent=(list.length===1?`¿Se imprimió bien ${side==="front"?"el frente del carnet":"el reverso"} de ${fullName(list[0])}?`:`¿Se imprimieron bien los ${list.length} ${side==="front"?"frentes":"reversos"}?`)
+    +(dobles?` ${dobles===1?"Un carnet de contratista quedará":dobles+" carnets de contratista quedarán"} con el reverso pendiente.`:"");
+  $("#printedYes").textContent=side==="front"?(list.length===1?"Sí, marcar el frente":"Sí, marcar los frentes"):(list.length===1?"Sí, marcar el reverso":"Sí, marcar los reversos");
   const d=$("#printedDlg");if(d.open)return;d.showModal?d.showModal():d.setAttribute("open","");$("#printedYes").focus();
 }
 function closePrinted(ok){
   const d=$("#printedDlg");d.close?d.close():d.removeAttribute("open");
-  if(pendingConfirm&&ok){markPrinted(pendingConfirm.list,pendingConfirm.side,true);toast(pendingConfirm.list.length===1?"Marcado como impreso":"Marcados como impresos")}
+  if(pendingConfirm&&ok){
+    const {list,side}=pendingConfirm;markPrinted(list,side,true);
+    const faltan=people.filter(faltaReverso).length;
+    toast(side==="front"&&faltan?`Frentes marcados. ${faltan===1?"Falta 1 reverso":"Faltan "+faltan+" reversos"}: imprímelos con «Imprimir reversos pendientes».`:(list.length===1?"Marcado como impreso":"Marcados como impresos"));
+  }
   else if(pendingConfirm)toast("Quedaron como pendientes. Puedes reimprimirlos con «Imprimir solo pendientes».");
   pendingConfirm=null;renderPeople();
 }
